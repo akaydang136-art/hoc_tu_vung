@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sổ tay Từ vựng HSK 1-2-3 (Ver 8.1)</title>
+<title>Sổ tay Từ vựng HSK (Bản Hoàn Chỉnh)</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
@@ -73,8 +73,8 @@
   .lesson-filter { text-align: center; margin-bottom: 16px; background: #e8f4f8; padding: 12px; border-radius: 8px; border: 1px dashed #3498db; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px;}
   .lesson-filter select { padding: 8px 16px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; outline: none; cursor: pointer; max-width: 100%; }
   
-  .audio-settings { display: flex; justify-content: center; align-items: center; gap: 10px; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; border: 1px solid #ddd; }
-  .audio-settings input[type=range] { width: 120px; cursor: pointer; }
+  .audio-settings { display: flex; justify-content: center; align-items: center; gap: 10px; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; border: 1px solid #ddd; flex-wrap: wrap;}
+  .audio-settings input[type=range] { width: 100px; cursor: pointer; }
   .audio-settings input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
   .speed-label { font-weight: bold; color: #e67e22; min-width: 40px; text-align: center; }
   
@@ -83,18 +83,32 @@
   .btn-speak-table { width: 32px; height: 32px; font-size: 14px; box-shadow: none; background: #ecf0f1; border: 1px solid #ccc; margin: 0; }
   .btn-speak-table:hover { background: #d5dbdb; }
 
+  /* FLASHCARD CSS */
+  .flashcard-container { perspective: 1000px; width: 100%; max-width: 400px; height: 250px; margin: 20px auto; cursor: pointer; }
+  .flashcard { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; }
+  .flashcard-container.flipped .flashcard { transform: rotateY(180deg); }
+  .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 16px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+  .flashcard-front { background: linear-gradient(135deg, #ffffff, #f0f0f0); border: 2px solid #ddd; }
+  .flashcard-back { background: linear-gradient(135deg, #fdfbfb, #ebedee); border: 2px solid #c0392b; transform: rotateY(180deg); }
+  .fc-hanzi { font-size: 64px; font-weight: bold; color: #333; margin-bottom: 10px; }
+  .fc-hanviet { font-size: 20px; color: #e67e22; font-style: italic; }
+  .fc-pinyin { font-size: 28px; color: #c0392b; font-weight: bold; margin-bottom: 10px; }
+  .fc-meaning { font-size: 22px; color: #333; }
+  .fc-hint { font-size: 13px; color: #888; position: absolute; bottom: 15px; width: 100%; text-align: center; }
+  
+  .flashcard-controls { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+
   @media (max-width: 600px) {
     .options { grid-template-columns: 1fr; }
     .question .prompt { font-size: 32px; }
     .type-box { flex-direction: column; }
     .question .prompt { flex-direction: column; gap: 6px; }
-    .audio-settings { flex-wrap: wrap; }
   }
 </style>
 </head>
 <body>
 
-<h1>📚 Sổ tay Từ vựng HSK 1-2-3</h1>
+<h1>📚 Sổ tay Từ vựng HSK</h1>
 <div class="subtitle">Học mọi lúc, mọi nơi - Tự do tùy biến bộ từ của bạn</div>
 
 <!-- ========== TAB NHẬP ========== -->
@@ -111,7 +125,7 @@
 
   <div class="card">
     <h3>Nhập từ file Excel / CSV</h3>
-    <p class="hint">File cần 3 cột: <b>Hán tự | Pinyin | Nghĩa</b>. (Nếu có cột Level, app sẽ tự bỏ qua).</p>
+    <p class="hint">File cần 3 cột: <b>Hán tự | Pinyin | Nghĩa</b>.</p>
     <div style="margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
       <label class="file-label btn-primary">
         📂 Nhập File (thay thế list)
@@ -133,7 +147,7 @@
   </div>
 </div>
 
-<!-- ========== TAB HỌC ========== -->
+<!-- ========== TAB HỌC (TRẮC NGHIỆM) ========== -->
 <div id="tab-quiz" class="hidden">
   <div class="card">
   
@@ -203,6 +217,48 @@
   </div>
 </div>
 
+<!-- ========== TAB FLASHCARD (MỚI) ========== -->
+<div id="tab-flashcard" class="hidden">
+  <div class="card">
+    <div class="lesson-filter">
+      <label for="fcLessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Cấp Độ:</label>
+      <select id="fcLessonSelect" onchange="changeFcLesson()">
+        <option value="all">Tất cả các từ</option>
+        <option value="HSK 1">HSK 1</option>
+        <option value="HSK 2">HSK 2</option>
+        <option value="HSK 3">HSK 3</option>
+        <option value="Tự nhập">Từ tự nhập thêm</option>
+      </select>
+      <label style="margin-left: 10px; font-size: 14px;"><input type="checkbox" id="fcAutoSpeak" checked onchange="saveFcSettings()"> Tự động đọc</label>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 10px;">
+      <span id="fcProgress" style="color: #666; font-weight: bold;">Thẻ 1 / 10</span>
+    </div>
+
+    <div class="flashcard-container" id="flashcardContainer" onclick="flipCard()">
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard-front">
+          <div class="fc-hanzi" id="fcFrontHanzi">你好</div>
+          <div class="fc-hanviet" id="fcFrontHanviet">Nhĩ hảo</div>
+          <div class="fc-hint">Bấm để xem đáp án</div>
+        </div>
+        <div class="flashcard-back">
+          <div class="fc-pinyin" id="fcBackPinyin">nǐ hǎo</div>
+          <div class="fc-meaning" id="fcBackMeaning">Xin chào</div>
+          <div class="fc-hint">Bấm để lật lại</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flashcard-controls">
+      <button class="btn-secondary" onclick="prevCard()">⬅ Trước</button>
+      <button class="btn-primary" onclick="speakCurrentCard()">🔊 Đọc</button>
+      <button class="btn-secondary" onclick="nextCard()">Sau ➡</button>
+    </div>
+  </div>
+</div>
+
 <!-- ========== TAB XEM LIST ========== -->
 <div id="tab-list" class="hidden">
   <div class="card">
@@ -218,7 +274,8 @@
 
 <div style="text-align: center; margin-top: 20px;">
   <button class="btn-secondary" onclick="showTab('input')">📝 Nhập từ</button>
-  <button class="btn-secondary" onclick="showTab('quiz')">🎯 Học</button>
+  <button class="btn-secondary" onclick="showTab('quiz')">🎯 Trắc nghiệm</button>
+  <button class="btn-secondary" onclick="showTab('flashcard')">🃏 Flashcard</button>
   <button class="btn-secondary" onclick="showTab('list')">📋 Xem list</button>
 </div>
 
@@ -799,7 +856,13 @@ let timerInterval = null;
 let currentMaxTime = 0;
 let timeLeft = 0;
 
-// ==================== HÀM PHÁT ÂM ====================
+// BIẾN FLASHCARD
+let fcWords = [];
+let fcIndex = 0;
+let fcAutoSpeak = true;
+let isFlipped = false;
+
+// ==================== PHÁT ÂM ====================
 function speakText(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel(); 
@@ -807,8 +870,6 @@ function speakText(text) {
     utterance.lang = 'zh-CN'; 
     utterance.rate = speechRate; 
     window.speechSynthesis.speak(utterance);
-  } else {
-    alert('Trình duyệt của bạn không hỗ trợ phát âm thanh.');
   }
 }
 
@@ -824,12 +885,6 @@ function speakCurrentWord() {
   }
 }
 
-function speakWordByIndex(index) {
-  if (words[index] && words[index].hanzi) {
-    speakText(words[index].hanzi);
-  }
-}
-
 function updateSpeedLabel() {
   const val = document.getElementById('speedRange').value;
   document.getElementById('speedLabel').textContent = val + 'x';
@@ -837,13 +892,13 @@ function updateSpeedLabel() {
 }
 
 function saveSpeed() {
-  localStorage.setItem('zh_speed_v8', speechRate);
+  localStorage.setItem('zh_speed_v10', speechRate);
 }
 
 // ==================== LOGIC ĐẾM NGƯỢC ====================
 function toggleTimer() {
   isTimerEnabled = document.getElementById('timerToggle').checked;
-  localStorage.setItem('zh_timer_v8', isTimerEnabled ? '1' : '0');
+  localStorage.setItem('zh_timer_v10', isTimerEnabled ? '1' : '0');
   if (currentWord) nextQuestion();
 }
 
@@ -873,11 +928,8 @@ function startTimer(maxTime, fromTime) {
       handleTimeout();
     } else {
       timerBar.style.width = (timeLeft / maxTime * 100) + '%';
-      if (timeLeft / maxTime < 0.25) {
-        timerBar.className = 'timer-bar danger';
-      } else if (timeLeft / maxTime < 0.6) {
-        timerBar.className = 'timer-bar warning';
-      }
+      if (timeLeft / maxTime < 0.25) timerBar.className = 'timer-bar danger';
+      else if (timeLeft / maxTime < 0.6) timerBar.className = 'timer-bar warning';
     }
   }, 100);
 }
@@ -904,7 +956,7 @@ function handleTimeout() {
   else if (effectiveMode === 'pinyin') correctAns = currentWord.pinyin;
   else correctAns = currentWord.meaning;
 
-  document.getElementById('answerReveal').textContent = '⏰ Hết giờ! Đáp án đúng: ' + correctAns;
+  document.getElementById('answerReveal').textContent = '⏰ Hết giờ! Đáp án: ' + correctAns;
   
   document.querySelectorAll('#optionsBox button').forEach(b => {
     if (b.textContent === correctAns) b.classList.add('correct');
@@ -922,37 +974,39 @@ function handleTimeout() {
 
 // ==================== KHỞI TẠO ====================
 function loadFromStorage() {
-  const savedSpeed = localStorage.getItem('zh_speed_v8');
+  const savedSpeed = localStorage.getItem('zh_speed_v10');
   if (savedSpeed) {
     speechRate = parseFloat(savedSpeed);
     document.getElementById('speedRange').value = speechRate;
     updateSpeedLabel();
   }
 
-  const savedTimer = localStorage.getItem('zh_timer_v8');
+  const savedTimer = localStorage.getItem('zh_timer_v10');
   if (savedTimer === '1') {
     isTimerEnabled = true;
     document.getElementById('timerToggle').checked = true;
   }
 
-  const saved = localStorage.getItem('zh_words_v8');
+  const saved = localStorage.getItem('zh_words_v10');
   if (saved) {
     try { words = JSON.parse(saved); } catch(e) { words = []; }
   }
   if (words.length === 0 && defaultWords.length > 0) {
     words = defaultWords.slice();
-    localStorage.setItem('zh_words_v8', JSON.stringify(words));
+    localStorage.setItem('zh_words_v10', JSON.stringify(words));
   }
-  const savedWrong = localStorage.getItem('zh_wrong_v8');
+  
+  const savedWrong = localStorage.getItem('zh_wrong_v10');
   if (savedWrong) { try { wrongPool = JSON.parse(savedWrong); } catch(e) { wrongPool = []; } }
   
-  const savedTypeMode = localStorage.getItem('zh_typemode_v8');
+  const savedTypeMode = localStorage.getItem('zh_typemode_v10');
   if (savedTypeMode === 'hanzi' || savedTypeMode === 'pinyin') typeMode = savedTypeMode;
   
-  const savedLesson = localStorage.getItem('zh_lesson_v8');
+  const savedLesson = localStorage.getItem('zh_lesson_v10');
   if (savedLesson) {
     currentLesson = savedLesson;
     document.getElementById('lessonSelect').value = currentLesson;
+    document.getElementById('fcLessonSelect').value = currentLesson;
   }
 
   updateToggleButtons();
@@ -960,38 +1014,44 @@ function loadFromStorage() {
 }
 
 function saveAll() {
-  localStorage.setItem('zh_words_v8', JSON.stringify(words));
-  localStorage.setItem('zh_wrong_v8', JSON.stringify(wrongPool));
+  localStorage.setItem('zh_words_v10', JSON.stringify(words));
+  localStorage.setItem('zh_wrong_v10', JSON.stringify(wrongPool));
 }
 
 function changeLesson() {
   currentLesson = document.getElementById('lessonSelect').value;
-  localStorage.setItem('zh_lesson_v8', currentLesson);
+  document.getElementById('fcLessonSelect').value = currentLesson;
+  localStorage.setItem('zh_lesson_v10', currentLesson);
   updateUI();
   nextQuestion();
+  initFlashcards();
 }
 
-// ==================== NẠP TỪ TEXT ====================
+function changeFcLesson() {
+  currentLesson = document.getElementById('fcLessonSelect').value;
+  document.getElementById('lessonSelect').value = currentLesson;
+  localStorage.setItem('zh_lesson_v10', currentLesson);
+  updateUI();
+  initFlashcards();
+}
+
+// ==================== NẠP TỪ ====================
 function loadWords(appendMode) {
   const text = document.getElementById('inputArea').value.trim();
-  if (!text) { alert('Vui lòng nhập list từ vào ô text!'); return; }
+  if (!text) { alert('Vui lòng nhập list từ!'); return; }
   const lines = text.split('\n').filter(l => l.trim());
   const newWords = [];
   for (const line of lines) {
-    let parts;
-    if (line.includes('\t')) parts = line.split('\t');
-    else if (line.includes('|')) parts = line.split('|');
-    else parts = line.split(',');
+    let parts = line.split(/[|,\t]/);
     parts = parts.map(p => p.trim()).filter(p => p);
     if (parts.length >= 3) {
       newWords.push({ level: 'Tự nhập', hanzi: parts[0], pinyin: parts[1], hanviet: '', meaning: parts[2] });
     }
   }
-  if (newWords.length === 0) { alert('Không đọc được từ nào. Kiểm tra định dạng: Hán tự | Pinyin | Nghĩa'); return; }
-  applyNewWords(newWords, appendMode, 'text');
+  if (newWords.length === 0) { alert('Định dạng sai. Cần: Hán tự | Pinyin | Nghĩa'); return; }
+  applyNewWords(newWords, appendMode);
 }
 
-// ==================== NẠP EXCEL/CSV ====================
 function loadExcel(event, appendMode) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1000,69 +1060,50 @@ function loadExcel(event, appendMode) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '' });
       let startIdx = 0;
-      if (rows.length && /hán|hanzi|pinyin|nghĩa|meaning/i.test(String(rows[0][0] || ''))) startIdx = 1;
+      if (rows.length && /hán|hanzi|pinyin/i.test(String(rows[0][0] || ''))) startIdx = 1;
       const newWords = [];
       for (let i = startIdx; i < rows.length; i++) {
         const r = rows[i];
         if (!r || !r[0]) continue;
-        
         let level = 'Tự nhập', hanzi = '', pinyin = '', hanviet = '', meaning = '';
-        
         if (String(r[0]).startsWith('HSK')) {
-          level = String(r[0]).trim();
-          hanzi = String(r[1]||'').trim();
-          pinyin = String(r[2]||'').trim();
-          hanviet = String(r[3]||'').trim();
-          meaning = String(r[4]||'').trim();
+          level = String(r[0]).trim(); hanzi = String(r[1]||'').trim(); pinyin = String(r[2]||'').trim(); hanviet = String(r[3]||'').trim(); meaning = String(r[4]||'').trim();
         } else {
-          hanzi = String(r[0]).trim();
-          pinyin = String(r[1]||'').trim();
-          meaning = String(r[2]||'').trim();
+          hanzi = String(r[0]).trim(); pinyin = String(r[1]||'').trim(); meaning = String(r[2]||'').trim();
         }
-
-        if (hanzi && pinyin && meaning) {
-           newWords.push({ level, hanzi, pinyin, hanviet, meaning });
-        }
+        if (hanzi && pinyin && meaning) newWords.push({ level, hanzi, pinyin, hanviet, meaning });
       }
       if (newWords.length === 0) { alert('Không đọc được dữ liệu.'); return; }
-      applyNewWords(newWords, appendMode, 'File');
+      applyNewWords(newWords, appendMode);
       event.target.value = '';
-    } catch (err) {
-      alert('Lỗi đọc file: ' + err.message);
-    }
+    } catch (err) { alert('Lỗi đọc file: ' + err.message); }
   };
   reader.readAsArrayBuffer(file);
 }
 
-function applyNewWords(newWords, appendMode, source) {
+function applyNewWords(newWords, appendMode) {
   if (appendMode) {
     const existing = new Set(words.map(w => w.hanzi + '|' + w.pinyin));
-    let added = 0, skipped = 0;
+    let added = 0;
     for (const w of newWords) {
       const key = w.hanzi + '|' + w.pinyin;
-      if (existing.has(key)) { skipped++; continue; }
-      words.push(w);
-      existing.add(key);
-      added++;
+      if (!existing.has(key)) { words.push(w); existing.add(key); added++; }
     }
-    saveAll();
-    updateUI();
-    alert('✅ Đã thêm ' + added + ' từ từ ' + source + '.' + (skipped ? '\nBỏ qua ' + skipped + ' từ trùng.' : ''));
+    alert('✅ Đã thêm ' + added + ' từ.');
   } else {
-    if (!confirm('Thay thế toàn bộ list hiện tại (' + words.length + ' từ) bằng ' + newWords.length + ' từ mới?')) return;
+    if (!confirm('Thay thế toàn bộ list hiện tại?')) return;
     words = newWords;
-    saveAll();
-    updateUI();
     alert('✅ Đã thay thế bằng ' + words.length + ' từ!');
   }
+  saveAll();
+  updateUI();
   showTab('quiz');
 }
 
 function clearWords() {
-  if (confirm('Xóa hết list từ? (Có thể khôi phục list mặc định sau)')) {
+  if (confirm('Xóa hết list từ?')) {
     words = [];
     saveAll();
     updateUI();
@@ -1070,27 +1111,24 @@ function clearWords() {
 }
 
 function restoreDefaults() {
-  if (!confirm('Khôi phục list mặc định? List hiện tại sẽ bị thay thế.')) return;
+  if (!confirm('Khôi phục list mặc định?')) return;
   words = defaultWords.slice();
   saveAll();
   updateUI();
-  alert('↩️ Đã khôi phục ' + words.length + ' từ mặc định.');
 }
 
 // ==================== CẬP NHẬT UI ====================
+function getFilteredPool() {
+  if (currentLesson === 'all') return words;
+  return words.filter(w => w.level === currentLesson);
+}
+
 function updateUI() {
   document.getElementById('countInfo').textContent = words.length ? '(' + words.length + ' từ)' : '';
   document.getElementById('listCount').textContent = words.length;
   
   document.getElementById('wordTable').innerHTML = words.map((w, index) =>
-    '<tr>' +
-    '<td>' + w.level + '</td>' +
-    '<td style="font-size:22px;">' + w.hanzi + '</td>' +
-    '<td>' + w.pinyin + '</td>' +
-    '<td>' + (w.hanviet || '-') + '</td>' +
-    '<td>' + w.meaning + '</td>' +
-    '<td><button class="btn-speak btn-speak-table" onclick="speakWordByIndex(' + index + ')" title="Nghe">🔊</button></td>' +
-    '</tr>'
+    '<tr><td>' + w.level + '</td><td style="font-size:22px;">' + w.hanzi + '</td><td>' + w.pinyin + '</td><td>' + (w.hanviet || '-') + '</td><td>' + w.meaning + '</td><td><button onclick="speakText(\'' + w.hanzi + '\')" style="background:none; border:none; cursor:pointer; font-size:16px;">🔊</button></td></tr>'
   ).join('');
   
   document.getElementById('wrongPoolCount').textContent = wrongPool.length;
@@ -1103,25 +1141,20 @@ function updateUI() {
   if (words.length > 0 && !currentWord) nextQuestion();
 }
 
-function getFilteredPool() {
-  if (currentLesson === 'all') return words;
-  return words.filter(w => w.level === currentLesson);
-}
-
-// ==================== TAB ====================
 function showTab(name) {
-  ['input','quiz','list'].forEach(t => {
+  ['input','quiz','flashcard','list'].forEach(t => {
     document.getElementById('tab-' + t).classList.add('hidden');
   });
   document.getElementById('tab-' + name).classList.remove('hidden');
   if (name === 'quiz' && !currentWord && words.length) nextQuestion();
+  if (name === 'flashcard') initFlashcards();
 }
 
 // ==================== CHẾ ĐỘ HỌC ====================
 function setMode(mode) {
   currentMode = mode;
   typeMode = null;
-  localStorage.setItem('zh_typemode_v8', '');
+  localStorage.setItem('zh_typemode_v10', '');
   updateToggleButtons();
   document.querySelectorAll('.tabs button').forEach(b => {
     b.classList.toggle('active', b.dataset.mode === mode);
@@ -1132,10 +1165,10 @@ function setMode(mode) {
 function toggleType(kind) {
   if (typeMode === kind) {
     typeMode = null;
-    localStorage.setItem('zh_typemode_v8', '');
+    localStorage.setItem('zh_typemode_v10', '');
   } else {
     typeMode = kind;
-    localStorage.setItem('zh_typemode_v8', kind);
+    localStorage.setItem('zh_typemode_v10', kind);
   }
   updateToggleButtons();
   document.getElementById('optionsBox').innerHTML = '';
@@ -1160,8 +1193,7 @@ function updateToggleButtons() {
 function normalize(str, mode) {
   let s = String(str).trim();
   if (mode === 'pinyin') {
-    s = s.toLowerCase().replace(/\s+/g, '');
-    // Không gọi hàm removeTones(s) nữa
+    s = s.replace(/\s+/g, ''); // Giữ nguyên dấu thanh
   } else if (mode === 'meaning') {
     s = s.toLowerCase().replace(/\s+/g, ' ').trim();
   } else {
@@ -1196,7 +1228,7 @@ function nextQuestion() {
 
     if (filteredWrongPool.length === 0) {
       document.getElementById('promptText').textContent = '🎉 Không có từ sai!';
-      document.getElementById('subText').textContent = 'Hãy học thêm để tạo danh sách từ sai.';
+      document.getElementById('subText').textContent = '';
       document.getElementById('optionsBox').innerHTML = '';
       document.getElementById('optionsBox').classList.add('hidden');
       document.getElementById('typeBox').classList.add('hidden');
@@ -1208,8 +1240,8 @@ function nextQuestion() {
   }
 
   if (pool.length === 0) {
-    document.getElementById('promptText').textContent = 'Chưa có từ nào trong bộ này';
-    document.getElementById('subText').textContent = 'Hãy chọn bộ khác hoặc thêm từ vựng.';
+    document.getElementById('promptText').textContent = 'Chưa có từ nào';
+    document.getElementById('subText').textContent = '';
     document.getElementById('optionsBox').innerHTML = '';
     document.getElementById('optionsBox').classList.add('hidden');
     document.getElementById('typeBox').classList.add('hidden');
@@ -1362,6 +1394,64 @@ function checkTyped() {
     updateStats();
     setNextButtonEnabled(true);
   }
+}
+
+// ==================== LOGIC FLASHCARD ====================
+function initFlashcards() {
+  fcWords = getFilteredPool();
+  fcIndex = 0;
+  isFlipped = false;
+  document.getElementById('flashcardContainer').classList.remove('flipped');
+  updateFlashcardUI();
+}
+
+function updateFlashcardUI() {
+  if (fcWords.length === 0) {
+    document.getElementById('fcFrontHanzi').textContent = 'Trống';
+    document.getElementById('fcProgress').textContent = 'Thẻ 0 / 0';
+    return;
+  }
+  if (fcIndex >= fcWords.length) fcIndex = 0;
+  if (fcIndex < 0) fcIndex = fcWords.length - 1;
+
+  const w = fcWords[fcIndex];
+  document.getElementById('fcFrontHanzi').textContent = w.hanzi;
+  document.getElementById('fcFrontHanviet').textContent = w.hanviet || '';
+  document.getElementById('fcBackPinyin').textContent = w.pinyin;
+  document.getElementById('fcBackMeaning').textContent = w.meaning;
+  document.getElementById('fcProgress').textContent = `Thẻ ${fcIndex + 1} / ${fcWords.length}`;
+
+  if (isFlipped) {
+    document.getElementById('flashcardContainer').classList.add('flipped');
+  } else {
+    document.getElementById('flashcardContainer').classList.remove('flipped');
+    if (fcAutoSpeak) speakText(w.hanzi);
+  }
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('flashcardContainer').classList.toggle('flipped');
+}
+
+function nextCard() {
+  fcIndex++;
+  isFlipped = false;
+  updateFlashcardUI();
+}
+
+function prevCard() {
+  fcIndex--;
+  isFlipped = false;
+  updateFlashcardUI();
+}
+
+function speakCurrentCard() {
+  if (fcWords.length > 0) speakText(fcWords[fcIndex].hanzi);
+}
+
+function saveFcSettings() {
+  fcAutoSpeak = document.getElementById('fcAutoSpeak').checked;
 }
 
 // ==================== HÀM PHỤ ====================
