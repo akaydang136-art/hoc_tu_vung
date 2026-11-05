@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sổ tay Từ vựng HSK (Bản Hoàn Chỉnh)</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+  body { max-width: 860px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+  
+  h1 { color: #c0392b; text-align: center; font-size: 26px; margin-bottom: 5px; }
+  .subtitle { text-align: center; color: #666; font-size: 15px; margin-bottom: 25px; font-style: italic; }
+  
+  h3 { margin-top: 0; color: #333; }
+  .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  textarea { width: 100%; height: 120px; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; }
+  button { padding: 10px 20px; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; margin: 4px; transition: 0.2s; }
+  
+  .btn-primary { background: #c0392b; color: white; }
+  .btn-primary:hover { background: #a93226; }
+  .btn-secondary { background: #3498db; color: white; }
+  .btn-secondary:hover { background: #2980b9; }
+  .btn-ghost { background: #ecf0f1; color: #333; }
+  .btn-ghost:hover { background: #d5dbdb; }
+  .btn-append { background: #16a085; color: white; }
+  .btn-append:hover { background: #138d75; }
+  .btn-toggle { background: #9b59b6; color: white; }
+  .btn-toggle.on { background: #8e44ad; }
+  .btn-next { background: #27ae60; color: white; font-weight: bold; }
+  .btn-next:hover { background: #229954; }
+  .btn-next.highlight { animation: pulse 1s infinite; }
+  
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(39,174,96,.7); }
+    50% { box-shadow: 0 0 0 8px rgba(39,174,96,0); }
+  }
+  
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button { flex: 1; background: #ecf0f1; min-width: 100px; color: #333; }
+  .tabs button.active { background: #c0392b; color: white; }
+  .hidden { display: none !important; }
+  
+  .question { text-align: center; padding: 20px 0 10px 0; }
+  .question .prompt { font-size: 40px; margin-bottom: 6px; display: flex; justify-content: center; align-items: center; gap: 12px; }
+  .question .sub { font-size: 17px; color: #666; }
+  
+  .timer-container { height: 10px; background: #eee; border-radius: 5px; margin-top: 15px; overflow: hidden; display: none; }
+  .timer-bar { height: 100%; width: 100%; background: #2ecc71; transition: width 0.1s linear, background-color 0.3s; }
+  .timer-bar.warning { background: #f39c12; }
+  .timer-bar.danger { background: #e74c3c; }
+  
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .options button { padding: 16px; font-size: 20px; background: white; border: 2px solid #ddd; }
+  .options button:hover { border-color: #c0392b; }
+  .options button.correct { background: #2ecc71; color: white; border-color: #2ecc71; }
+  .options button.wrong { background: #e74c3c; color: white; border-color: #e74c3c; }
+  .stats { display: flex; gap: 12px; justify-content: center; font-size: 15px; flex-wrap: wrap; margin-bottom: 10px;}
+  .stats span { padding: 6px 12px; background: #ecf0f1; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
+  th { background: #f8f8f8; }
+  .hint { font-size: 13px; color: #888; margin-top: 6px; }
+  .type-box { display: flex; gap: 8px; margin-top: 16px; }
+  .type-box input { flex: 1; padding: 14px 16px; font-size: 22px; border: 2px solid #ddd; border-radius: 8px; text-align: center; }
+  .type-box input:focus { outline: none; border-color: #c0392b; }
+  .type-box input.correct { border-color: #2ecc71; background: #eafaf1; }
+  .type-box input.wrong { border-color: #e74c3c; background: #fdedec; }
+  .type-box button { padding: 14px 24px; font-size: 16px; }
+  .answer-reveal { margin-top: 12px; font-size: 18px; color: #c0392b; text-align: center; min-height: 24px; font-weight: bold; }
+  .file-label { display: inline-block; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 15px; color: white; }
+  
+  .lesson-filter { text-align: center; margin-bottom: 16px; background: #e8f4f8; padding: 12px; border-radius: 8px; border: 1px dashed #3498db; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px;}
+  .lesson-filter select { padding: 8px 16px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; outline: none; cursor: pointer; max-width: 100%; }
+  
+  .audio-settings { display: flex; justify-content: center; align-items: center; gap: 10px; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; border: 1px solid #ddd; flex-wrap: wrap;}
+  .audio-settings input[type=range] { width: 100px; cursor: pointer; }
+  .audio-settings input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+  .speed-label { font-weight: bold; color: #e67e22; min-width: 40px; text-align: center; }
+  
+  .btn-speak { background: #f1c40f; color: #333; border-radius: 50%; width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; border: none; box-shadow: 0 2px 4px rgba(0,0,0,.2); transition: transform 0.1s; flex-shrink: 0; margin: 0; }
+  .btn-speak:hover { background: #f39c12; transform: scale(1.1); }
+  .btn-speak-table { width: 32px; height: 32px; font-size: 14px; box-shadow: none; background: #ecf0f1; border: 1px solid #ccc; margin: 0; }
+  .btn-speak-table:hover { background: #d5dbdb; }
+
+  /* FLASHCARD CSS */
+  .flashcard-container { perspective: 1000px; width: 100%; max-width: 400px; height: 250px; margin: 20px auto; cursor: pointer; }
+  .flashcard { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; }
+  .flashcard-container.flipped .flashcard { transform: rotateY(180deg); }
+  .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 16px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+  .flashcard-front { background: linear-gradient(135deg, #ffffff, #f0f0f0); border: 2px solid #ddd; }
+  .flashcard-back { background: linear-gradient(135deg, #fdfbfb, #ebedee); border: 2px solid #c0392b; transform: rotateY(180deg); }
+  .fc-hanzi { font-size: 64px; font-weight: bold; color: #333; margin-bottom: 10px; }
+  .fc-hanviet { font-size: 20px; color: #e67e22; font-style: italic; }
+  .fc-pinyin { font-size: 28px; color: #c0392b; font-weight: bold; margin-bottom: 10px; }
+  .fc-meaning { font-size: 22px; color: #333; }
+  .fc-hint { font-size: 13px; color: #888; position: absolute; bottom: 15px; width: 100%; text-align: center; }
+  
+  .flashcard-controls { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+
+  @media (max-width: 600px) {
+    .options { grid-template-columns: 1fr; }
+    .question .prompt { font-size: 32px; }
+    .type-box { flex-direction: column; }
+    .question .prompt { flex-direction: column; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>📚 Sổ tay Từ vựng HSK</h1>
+<div class="subtitle">Học mọi lúc, mọi nơi - Tự do tùy biến bộ từ của bạn</div>
+
+<!-- ========== TAB NHẬP ========== -->
+<div id="tab-input">
+  <div class="card">
+    <h3>Nhập list từ bằng text</h3>
+    <p class="hint">Mỗi dòng: <b>Hán tự | Pinyin | Nghĩa</b> (cách nhau dấu <b>|</b>, <b>Tab</b> hoặc <b>,</b>)</p>
+    <textarea id="inputArea" placeholder="苹果 | píngguǒ | Quả táo"></textarea>
+    <div style="margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+      <button class="btn-primary" onclick="loadWords(false)">📥 Thay thế toàn bộ list</button>
+      <button class="btn-append" onclick="loadWords(true)">➕ Thêm vào list hiện tại</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Nhập từ file Excel / CSV</h3>
+    <p class="hint">File cần 3 cột: <b>Hán tự | Pinyin | Nghĩa</b>.</p>
+    <div style="margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+      <label class="file-label btn-primary">
+        📂 Nhập File (thay thế list)
+        <input type="file" id="excelReplace" accept=".xlsx,.xls,.csv" style="display:none;" onchange="loadExcel(event, false)">
+      </label>
+      <label class="file-label btn-append">
+        📂➕ Nhập File (thêm từ mới)
+        <input type="file" id="excelAppend" accept=".xlsx,.xls,.csv" style="display:none;" onchange="loadExcel(event, true)">
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+      <button class="btn-ghost" onclick="clearWords()">🗑 Xóa sạch list</button>
+      <button class="btn-ghost" onclick="restoreDefaults()">↩️ Khôi phục list mặc định</button>
+      <span id="countInfo" style="color: #666;"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TAB HỌC (TRẮC NGHIỆM) ========== -->
+<div id="tab-quiz" class="hidden">
+  <div class="card">
+  
+    <div class="audio-settings">
+      <span>🔈 Tốc độ đọc:</span>
+      <input type="range" id="speedRange" min="0.5" max="1.2" step="0.1" value="0.85" oninput="updateSpeedLabel()" onchange="saveSpeed()">
+      <span class="speed-label" id="speedLabel">0.85x</span>
+      
+      <span style="margin-left: 15px; border-left: 1px solid #ccc; padding-left: 15px;">⏱️ Tính giờ:</span>
+      <input type="checkbox" id="timerToggle" onchange="toggleTimer()">
+    </div>
+
+    <div class="lesson-filter">
+      <label for="lessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Cấp Độ:</label>
+      <select id="lessonSelect" onchange="changeLesson()">
+        <option value="all">Tất cả các từ</option>
+        <option value="HSK 1">HSK 1</option>
+        <option value="HSK 2">HSK 2</option>
+        <option value="HSK 3">HSK 3</option>
+        <option value="Tự nhập">Từ tự nhập thêm</option>
+      </select>
+      <span id="lessonCount" style="font-size: 14px; color: #666;"></span>
+    </div>
+
+    <div class="tabs">
+      <button data-mode="hanzi" class="active" onclick="setMode('hanzi')">Điền Hán tự</button>
+      <button data-mode="pinyin" onclick="setMode('pinyin')">Điền Pinyin</button>
+      <button data-mode="meaning" onclick="setMode('meaning')">Điền Nghĩa</button>
+      <button data-mode="wrong" onclick="setMode('wrong')" style="background:#f39c12; color:white;">🔥 Ôn từ sai</button>
+    </div>
+    
+    <div style="text-align: center; margin-bottom: 12px;">
+      <button id="typeHanziBtn" class="btn-toggle" onclick="toggleType('hanzi')">⌨️ Gõ Hán tự (hiện Nghĩa)</button>
+      <button id="typePinyinBtn" class="btn-toggle" onclick="toggleType('pinyin')">⌨️ Gõ Pinyin (hiện Hán tự + Nghĩa)</button>
+    </div>
+    
+    <div class="stats">
+      <span>✅ Đúng: <b id="correctCount">0</b></span>
+      <span>❌ Sai: <b id="wrongCount">0</b></span>
+      <span>📝 Tổng: <b id="totalCount">0</b></span>
+      <span>🔥 Từ sai: <b id="wrongPoolCount">0</b></span>
+    </div>
+    
+    <div class="question">
+      <div class="prompt" id="promptContainer">
+        <span id="promptText">—</span>
+        <button class="btn-speak" id="speakBtn" onclick="speakCurrentWord()" title="Nghe phát âm">🔊</button>
+      </div>
+      <div class="sub" id="subText"></div>
+    </div>
+    
+    <div class="timer-container" id="timerContainer">
+      <div class="timer-bar" id="timerBar"></div>
+    </div>
+    
+    <div class="options" id="optionsBox"></div>
+    <div class="type-box hidden" id="typeBox">
+      <input type="text" id="typeInput" placeholder="Gõ đáp án..." onkeydown="if(event.key==='Enter') checkTyped()">
+      <button class="btn-primary" onclick="checkTyped()">Kiểm tra</button>
+    </div>
+    <div class="answer-reveal" id="answerReveal"></div>
+    <div style="text-align: center; margin-top: 16px;">
+      <button id="nextBtn" class="btn-next" onclick="nextQuestion()">⏭ Câu tiếp theo</button>
+      <button class="btn-ghost" onclick="resetStats()">🔄 Reset điểm</button>
+      <button class="btn-ghost" onclick="resetWrongPool()">🧹 Xóa từ sai</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TAB FLASHCARD (MỚI) ========== -->
+<div id="tab-flashcard" class="hidden">
+  <div class="card">
+    <div class="lesson-filter">
+      <label for="fcLessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Cấp Độ:</label>
+      <select id="fcLessonSelect" onchange="changeFcLesson()">
+        <option value="all">Tất cả các từ</option>
+        <option value="HSK 1">HSK 1</option>
+        <option value="HSK 2">HSK 2</option>
+        <option value="HSK 3">HSK 3</option>
+        <option value="Tự nhập">Từ tự nhập thêm</option>
+      </select>
+      <label style="margin-left: 10px; font-size: 14px;"><input type="checkbox" id="fcAutoSpeak" checked onchange="saveFcSettings()"> Tự động đọc</label>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 10px;">
+      <span id="fcProgress" style="color: #666; font-weight: bold;">Thẻ 1 / 10</span>
+    </div>
+
+    <div class="flashcard-container" id="flashcardContainer" onclick="flipCard()">
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard-front">
+          <div class="fc-hanzi" id="fcFrontHanzi">你好</div>
+          <div class="fc-hanviet" id="fcFrontHanviet">Nhĩ hảo</div>
+          <div class="fc-hint">Bấm để xem đáp án</div>
+        </div>
+        <div class="flashcard-back">
+          <div class="fc-pinyin" id="fcBackPinyin">nǐ hǎo</div>
+          <div class="fc-meaning" id="fcBackMeaning">Xin chào</div>
+          <div class="fc-hint">Bấm để lật lại</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flashcard-controls">
+      <button class="btn-secondary" onclick="prevCard()">⬅ Trước</button>
+      <button class="btn-primary" onclick="speakCurrentCard()">🔊 Đọc</button>
+      <button class="btn-secondary" onclick="nextCard()">Sau ➡</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TAB XEM LIST ========== -->
+<div id="tab-list" class="hidden">
+  <div class="card">
+    <h3>Danh sách từ (<span id="listCount">0</span> từ)</h3>
+    <div style="max-height: 400px; overflow-y: auto;">
+      <table>
+        <thead><tr><th>Cấp độ</th><th>Hán tự</th><th>Pinyin</th><th>Hán Việt</th><th>Nghĩa</th><th>Nghe</th></tr></thead>
+        <tbody id="wordTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+  <button class="btn-secondary" onclick="showTab('input')">📝 Nhập từ</button>
+  <button class="btn-secondary" onclick="showTab('quiz')">🎯 Trắc nghiệm</button>
+  <button class="btn-secondary" onclick="showTab('flashcard')">🃏 Flashcard</button>
+  <button class="btn-secondary" onclick="showTab('list')">📋 Xem list</button>
+</div>
+
+<script>
+// ============================================================
+// LIST TỪ MẶC ĐỊNH HSK 1-2-3
+// ============================================================
+const defaultWords = [
+  // HSK 1
+  { level: 'HSK 1', hanzi: '爱', pinyin: 'ài', hanviet: 'Ái', meaning: 'Yêu, thích' },
+  { level: 'HSK 1', hanzi: '八', pinyin: 'bā', hanviet: 'Bát', meaning: 'Số 8' },
+  { level: 'HSK 1', hanzi: '爸爸', pinyin: 'bàba', hanviet: 'Bố', meaning: 'Bố, cha' },
+  { level: 'HSK 1', hanzi: '杯子', pinyin: 'bēizi', hanviet: 'Bôi tử', meaning: 'Cốc, ly' },
+  { level: 'HSK 1', hanzi: '北京', pinyin: 'Běijīng', hanviet: 'Bắc Kinh', meaning: 'Bắc Kinh' },
+  { level: 'HSK 1', hanzi: '本', pinyin: 'běn', hanviet: 'Bản', meaning: 'Cuốn, quyển (lượng từ)' },
+  { level: 'HSK 1', hanzi: '不客气', pinyin: 'bú kèqi', hanviet: 'Bất khách khí', meaning: 'Không có gì, đừng khách khí' },
+  { level: 'HSK 1', hanzi: '不', pinyin: 'bù', hanviet: 'Bất', meaning: 'Không' },
+  { level: 'HSK 1', hanzi: '菜', pinyin: 'cài', hanviet: 'Thái', meaning: 'Món ăn, rau' },
+  { level: 'HSK 1', hanzi: '茶', pinyin: 'chá', hanviet: 'Trà', meaning: 'Trà, chè' },
+  { level: 'HSK 1', hanzi: '吃', pinyin: 'chī', hanviet: 'Cật', meaning: 'Ăn' },
+  { level: 'HSK 1', hanzi: '出租车', pinyin: 'chūzūchē', hanviet: 'Xuất tô xa', meaning: 'Xe taxi' },
+  { level: 'HSK 1', hanzi: '打电话', pinyin: 'dǎ diànhuà', hanviet: 'Đả điện thoại', meaning: 'Gọi điện thoại' },
+  { level: 'HSK 1', hanzi: '大', pinyin: 'dà', hanviet: 'Đại', meaning: 'To, lớn' },
+  { level: 'HSK 1', hanzi: '的', pinyin: 'de', hanviet: 'Đích', meaning: 'Của (trợ từ sở hữu)' },
+  { level: 'HSK 1', hanzi: '点', pinyin: 'diǎn', hanviet: 'Điểm', meaning: 'Giờ, chút ít' },
+  { level: 'HSK 1', hanzi: '电脑', pinyin: 'diànnǎo', hanviet: 'Điện não', meaning: 'Máy tính' },
+  { level: 'HSK 1', hanzi: '电视', pinyin: 'diànshì', hanviet: 'Điện thị', meaning: 'Tivi, truyền hình' },
+  { level: 'HSK 1', hanzi: '电影', pinyin: 'diànyǐng', hanviet: 'Điện ảnh', meaning: 'Phim, điện ảnh' },
+  { level: 'HSK 1', hanzi: '东西', pinyin: 'dōngxi', hanviet: 'Đông tây', meaning: 'Đồ đạc, vật dụng' },
+  { level: 'HSK 1', hanzi: '都', pinyin: 'dōu', hanviet: 'Đô', meaning: 'Đều' },
+  { level: 'HSK 1', hanzi: '读', pinyin: 'dú', hanviet: 'Độc', meaning: 'Đọc' },
+  { level: 'HSK 1', hanzi: '对不起', pinyin: 'duìbuqǐ', hanviet: 'Đối bất khởi', meaning: 'Xin lỗi' },
+  { level: 'HSK 1', hanzi: '多', pinyin: 'duō', hanviet: 'Đa', meaning: 'Nhiều' },
+  { level: 'HSK 1', hanzi: '多少', pinyin: 'duōshao', hanviet: 'Đa thiểu', meaning: 'Bao nhiêu' },
+  { level: 'HSK 1', hanzi: '儿子', pinyin: 'érzi', hanviet: 'Nhi tử', meaning: 'Con trai' },
+  { level: 'HSK 1', hanzi: '二', pinyin: 'èr', hanviet: 'Nhị', meaning: 'Số 2' },
+  { level: 'HSK 1', hanzi: '饭店', pinyin: 'fàndiàn', hanviet: 'Phạn điếm', meaning: 'Nhà hàng, khách sạn' },
+  { level: 'HSK 1', hanzi: '飞机', pinyin: 'fēijī', hanviet: 'Phi cơ', meaning: 'Máy bay' },
+  { level: 'HSK 1', hanzi: '分钟', pinyin: 'fēnzhōng', hanviet: 'Phân chung', meaning: 'Phút' },
+  { level: 'HSK 1', hanzi: '高兴', pinyin: 'gāoxìng', hanviet: 'Cao hưng', meaning: 'Vui vẻ, phấn khởi' },
+  { level: 'HSK 1', hanzi: '个', pinyin: 'gè', hanviet: 'Cá', meaning: 'Cái, con (lượng từ chung)' },
+  { level: 'HSK 1', hanzi: '工作', pinyin: 'gōngzuò', hanviet: 'Công tác', meaning: 'Công việc, làm việc' },
+  { level: 'HSK 1', hanzi: '狗', pinyin: 'gǒu', hanviet: 'Cẩu', meaning: 'Con chó' },
+  { level: 'HSK 1', hanzi: '汉语', pinyin: 'Hànyǔ', hanviet: 'Hán ngữ', meaning: 'Tiếng Hán, tiếng Trung' },
+  { level: 'HSK 1', hanzi: '好', pinyin: 'hǎo', hanviet: 'Hảo', meaning: 'Tốt, đẹp, hay' },
+  { level: 'HSK 1', hanzi: '喝', pinyin: 'hē', hanviet: 'Hát', meaning: 'Uống' },
+  { level: 'HSK 1', hanzi: '和', pinyin: 'hé', hanviet: 'Hòa', meaning: 'Và, cùng' },
+  { level: 'HSK 1', hanzi: '很', pinyin: 'hěn', hanviet: 'Hẩn', meaning: 'Rất' },
+  { level: 'HSK 1', hanzi: '后面', pinyin: 'hòumiàn', hanviet: 'Hậu diện', meaning: 'Phía sau, đằng sau' },
+  { level: 'HSK 1', hanzi: '回', pinyin: 'huí', hanviet: 'Hồi', meaning: 'Về, quay lại' },
+  { level: 'HSK 1', hanzi: '会', pinyin: 'huì', hanviet: 'Hội', meaning: 'Biết, sẽ' },
+  { level: 'HSK 1', hanzi: '几', pinyin: 'jǐ', hanviet: 'Kỷ', meaning: 'Mấy' },
+  { level: 'HSK 1', hanzi: '家', pinyin: 'jiā', hanviet: 'Gia', meaning: 'Nhà, gia đình' },
+  { level: 'HSK 1', hanzi: '叫', pinyin: 'jiào', hanviet: 'Khiếu', meaning: 'Tên là, gọi là' },
+  { level: 'HSK 1', hanzi: '今天', pinyin: 'jīntiān', hanviet: 'Kim thiên', meaning: 'Hôm nay' },
+  { level: 'HSK 1', hanzi: '九', pinyin: 'jiǔ', hanviet: 'Cửu', meaning: 'Số 9' },
+  { level: 'HSK 1', hanzi: '开', pinyin: 'kāi', hanviet: 'Khai', meaning: 'Mở, lái (xe)' },
+  { level: 'HSK 1', hanzi: '看', pinyin: 'kàn', hanviet: 'Khán', meaning: 'Nhìn, xem, đọc' },
+  { level: 'HSK 1', hanzi: '看见', pinyin: 'kànjiàn', hanviet: 'Khán kiến', meaning: 'Nhìn thấy' },
+  { level: 'HSK 1', hanzi: '块', pinyin: 'kuài', hanviet: 'Khối', meaning: 'Đồng (đơn vị tiền), miếng' },
+  { level: 'HSK 1', hanzi: '来', pinyin: 'lái', hanviet: 'Lai', meaning: 'Đến, tới' },
+  { level: 'HSK 1', hanzi: '老师', pinyin: 'lǎoshī', hanviet: 'Lão sư', meaning: 'Thầy/cô giáo' },
+  { level: 'HSK 1', hanzi: '了', pinyin: 'le', hanviet: 'Liễu', meaning: 'Rồi (trợ từ ngữ khí)' },
+  { level: 'HSK 1', hanzi: '冷', pinyin: 'lěng', hanviet: 'Lãnh', meaning: 'Lạnh' },
+  { level: 'HSK 1', hanzi: '里', pinyin: 'lǐ', hanviet: 'Lý', meaning: 'Bên trong' },
+  { level: 'HSK 1', hanzi: '六', pinyin: 'liù', hanviet: 'Lục', meaning: 'Số 6' },
+  { level: 'HSK 1', hanzi: '妈妈', pinyin: 'māma', hanviet: 'Ma ma', meaning: 'Mẹ' },
+  { level: 'HSK 1', hanzi: '吗', pinyin: 'ma', hanviet: 'Ma', meaning: 'Không (trợ từ nghi vấn)' },
+  { level: 'HSK 1', hanzi: '买', pinyin: 'mǎi', hanviet: 'Mãi', meaning: 'Mua' },
+  { level: 'HSK 1', hanzi: '猫', pinyin: 'māo', hanviet: 'Miêu', meaning: 'Con mèo' },
+  { level: 'HSK 1', hanzi: '没关系', pinyin: 'méi guānxi', hanviet: 'Một quan hệ', meaning: 'Không sao, không có gì' },
+  { level: 'HSK 1', hanzi: '没有', pinyin: 'méiyǒu', hanviet: 'Một hữu', meaning: 'Không có' },
+  { level: 'HSK 1', hanzi: '米饭', pinyin: 'mǐfàn', hanviet: 'Mễ phạn', meaning: 'Cơm' },
+  { level: 'HSK 1', hanzi: '名字', pinyin: 'míngzi', hanviet: 'Danh tự', meaning: 'Tên' },
+  { level: 'HSK 1', hanzi: '明天', pinyin: 'míngtiān', hanviet: 'Minh thiên', meaning: 'Ngày mai' },
+  { level: 'HSK 1', hanzi: '哪', pinyin: 'nǎ', hanviet: 'Nả', meaning: 'Nào, đâu' },
+  { level: 'HSK 1', hanzi: '哪儿', pinyin: 'nǎr', hanviet: 'Nả nhi', meaning: 'Ở đâu, chỗ nào' },
+  { level: 'HSK 1', hanzi: '那', pinyin: 'nà', hanviet: 'Na', meaning: 'Kia, kia là' },
+  { level: 'HSK 1', hanzi: '呢', pinyin: 'ne', hanviet: 'Ni', meaning: 'Thế, còn... thì sao' },
+  { level: 'HSK 1', hanzi: '能', pinyin: 'néng', hanviet: 'Năng', meaning: 'Có thể' },
+  { level: 'HSK 1', hanzi: '你', pinyin: 'nǐ', hanviet: 'Nhĩ', meaning: 'Bạn, anh, chị' },
+  { level: 'HSK 1', hanzi: '年', pinyin: 'nián', hanviet: 'Niên', meaning: 'Năm' },
+  { level: 'HSK 1', hanzi: '女儿', pinyin: 'nǚ\'ér', hanviet: 'Nữ nhi', meaning: 'Con gái' },
+  { level: 'HSK 1', hanzi: '朋友', pinyin: 'péngyou', hanviet: 'Bằng hữu', meaning: 'Bạn bè' },
+  { level: 'HSK 1', hanzi: '漂亮', pinyin: 'piàoliang', hanviet: 'Phiêu lượng', meaning: 'Đẹp, xinh đẹp' },
+  { level: 'HSK 1', hanzi: '苹果', pinyin: 'píngguǒ', hanviet: 'Bình quả', meaning: 'Quả táo' },
+  { level: 'HSK 1', hanzi: '七', pinyin: 'qī', hanviet: 'Thất', meaning: 'Số 7' },
+  { level: 'HSK 1', hanzi: '钱', pinyin: 'qián', hanviet: 'Tiền', meaning: 'Tiền' },
+  { level: 'HSK 1', hanzi: '前面', pinyin: 'qiánmiàn', hanviet: 'Tiền diện', meaning: 'Phía trước, đằng trước' },
+  { level: 'HSK 1', hanzi: '请', pinyin: 'qǐng', hanviet: 'Thỉnh', meaning: 'Xin, mời' },
+  { level: 'HSK 1', hanzi: '去', pinyin: 'qù', hanviet: 'Khứ', meaning: 'Đi' },
+  { level: 'HSK 1', hanzi: '热', pinyin: 'rè', hanviet: 'Nhiệt', meaning: 'Nóng' },
+  { level: 'HSK 1', hanzi: '人', pinyin: 'rén', hanviet: 'Nhân', meaning: 'Người' },
+  { level: 'HSK 1', hanzi: '认识', pinyin: 'rènshi', hanviet: 'Nhận thức', meaning: 'Quen biết, nhận biết' },
+  { level: 'HSK 1', hanzi: '三', pinyin: 'sān', hanviet: 'Tam', meaning: 'Số 3' },
+  { level: 'HSK 1', hanzi: '商店', pinyin: 'shāngdiàn', hanviet: 'Thương điếm', meaning: 'Cửa hàng' },
+  { level: 'HSK 1', hanzi: '上', pinyin: 'shàng', hanviet: 'Thượng', meaning: 'Bên trên, lên' },
+  { level: 'HSK 1', hanzi: '上午', pinyin: 'shàngwǔ', hanviet: 'Thượng ngọ', meaning: 'Buổi sáng' },
+  { level: 'HSK 1', hanzi: '少', pinyin: 'shǎo', hanviet: 'Thiểu', meaning: 'Ít' },
+  { level: 'HSK 1', hanzi: '谁', pinyin: 'shéi', hanviet: 'Thùy', meaning: 'Ai' },
+  { level: 'HSK 1', hanzi: '什么', pinyin: 'shénme', hanviet: 'Thập ma', meaning: 'Cái gì' },
+  { level: 'HSK 1', hanzi: '十', pinyin: 'shí', hanviet: 'Thập', meaning: 'Số 10' },
+  { level: 'HSK 1', hanzi: '时候', pinyin: 'shíhou', hanviet: 'Thời hậu', meaning: 'Lúc, thời gian' },
+  { level: 'HSK 1', hanzi: '是', pinyin: 'shì', hanviet: 'Thị', meaning: 'Là, phải, đúng' },
+  { level: 'HSK 1', hanzi: '书', pinyin: 'shū', hanviet: 'Thư', meaning: 'Sách' },
+  { level: 'HSK 1', hanzi: '水', pinyin: 'shuǐ', hanviet: 'Thủy', meaning: 'Nước' },
+  { level: 'HSK 1', hanzi: '水果', pinyin: 'shuǐguǒ', hanviet: 'Thủy quả', meaning: 'Hoa quả, trái cây' },
+  { level: 'HSK 1', hanzi: '睡觉', pinyin: 'shuìjiào', hanviet: 'Thụy giác', meaning: 'Ngủ' },
+  { level: 'HSK 1', hanzi: '说话', pinyin: 'shuōhuà', hanviet: 'Thuyết thoại', meaning: 'Nói chuyện' },
+  { level: 'HSK 1', hanzi: '四', pinyin: 'sì', hanviet: 'Tứ', meaning: 'Số 4' },
+  { level: 'HSK 1', hanzi: '岁', pinyin: 'suì', hanviet: 'Tuế', meaning: 'Tuổi' },
+  { level: 'HSK 1', hanzi: '他', pinyin: 'tā', hanviet: 'Tha', meaning: 'Anh ấy, ông ấy' },
+  { level: 'HSK 1', hanzi: '她', pinyin: 'tā', hanviet: 'Tha', meaning: 'Cô ấy, bà ấy' },
+  { level: 'HSK 1', hanzi: '太', pinyin: 'tài', hanviet: 'Thái', meaning: 'Quá, lắm' },
+  { level: 'HSK 1', hanzi: '天气', pinyin: 'tiānqì', hanviet: 'Thiên khí', meaning: 'Thời tiết' },
+  { level: 'HSK 1', hanzi: '听', pinyin: 'tīng', hanviet: 'Thính', meaning: 'Nghe' },
+  { level: 'HSK 1', hanzi: '同学', pinyin: 'tóngxué', hanviet: 'Đồng học', meaning: 'Bạn học' },
+  { level: 'HSK 1', hanzi: '喂', pinyin: 'wèi', hanviet: 'Uý', meaning: 'Alo (nghe điện thoại)' },
+  { level: 'HSK 1', hanzi: '我', pinyin: 'wǒ', hanviet: 'Ngã', meaning: 'Tôi, ta' },
+  { level: 'HSK 1', hanzi: '我们', pinyin: 'wǒmen', hanviet: 'Ngã môn', meaning: 'Chúng tôi, chúng ta' },
+  { level: 'HSK 1', hanzi: '五', pinyin: 'wǔ', hanviet: 'Ngũ', meaning: 'Số 5' },
+  { level: 'HSK 1', hanzi: '喜欢', pinyin: 'xǐhuan', hanviet: 'Hỷ hoan', meaning: 'Thích' },
+  { level: 'HSK 1', hanzi: '下', pinyin: 'xià', hanviet: 'Hạ', meaning: 'Dưới, xuống' },
+  { level: 'HSK 1', hanzi: '下午', pinyin: 'xiàwǔ', hanviet: 'Hạ ngọ', meaning: 'Buổi chiều' },
+  { level: 'HSK 1', hanzi: '下雨', pinyin: 'xiàyǔ', hanviet: 'Hạ vũ', meaning: 'Mưa, đổ mưa' },
+  { level: 'HSK 1', hanzi: '先生', pinyin: 'xiānsheng', hanviet: 'Tiên sinh', meaning: 'Ông, ngài, chú' },
+  { level: 'HSK 1', hanzi: '现在', pinyin: 'xiànzài', hanviet: 'Hiện tại', meaning: 'Bây giờ, hiện tại' },
+  { level: 'HSK 1', hanzi: '想', pinyin: 'xiǎng', hanviet: 'Tưởng', meaning: 'Muốn, nhớ, nghĩ' },
+  { level: 'HSK 1', hanzi: '小', pinyin: 'xiǎo', hanviet: 'Tiểu', meaning: 'Nhỏ, bé' },
+  { level: 'HSK 1', hanzi: '小姐', pinyin: 'xiǎojie', hanviet: 'Tiểu thư', meaning: 'Cô, cô gái' },
+  { level: 'HSK 1', hanzi: '些', pinyin: 'xiē', hanviet: 'Tá', meaning: 'Một vài, một ít' },
+  { level: 'HSK 1', hanzi: '写', pinyin: 'xiě', hanviet: 'Tả', meaning: 'Viết' },
+  { level: 'HSK 1', hanzi: '谢谢', pinyin: 'xièxie', hanviet: 'Tạ tạ', meaning: 'Cảm ơn' },
+  { level: 'HSK 1', hanzi: '星期', pinyin: 'xīngqī', hanviet: 'Tinh kỳ', meaning: 'Tuần, thứ' },
+  { level: 'HSK 1', hanzi: '学生', pinyin: 'xuésheng', hanviet: 'Học sinh', meaning: 'Học sinh, sinh viên' },
+  { level: 'HSK 1', hanzi: '学习', pinyin: 'xuéxí', hanviet: 'Học tập', meaning: 'Học, học tập' },
+  { level: 'HSK 1', hanzi: '学校', pinyin: 'xuéxiào', hanviet: 'Học hiệu', meaning: 'Trường học' },
+  { level: 'HSK 1', hanzi: '一', pinyin: 'yī', hanviet: 'Nhất', meaning: 'Số 1' },
+  { level: 'HSK 1', hanzi: '衣服', pinyin: 'yīfu', hanviet: 'Y phục', meaning: 'Quần áo' },
+  { level: 'HSK 1', hanzi: '医生', pinyin: 'yīshēng', hanviet: 'Y sinh', meaning: 'Bác sĩ' },
+  { level: 'HSK 1', hanzi: '医院', pinyin: 'yīyuàn', hanviet: 'Y viện', meaning: 'Bệnh viện' },
+  { level: 'HSK 1', hanzi: '椅子', pinyin: 'yǐzi', hanviet: 'Ỷ tử', meaning: 'Cái ghế' },
+  { level: 'HSK 1', hanzi: '有', pinyin: 'yǒu', hanviet: 'Hữu', meaning: 'Có' },
+  { level: 'HSK 1', hanzi: '月', pinyin: 'yuè', hanviet: 'Nguyệt', meaning: 'Tháng, mặt trăng' },
+  { level: 'HSK 1', hanzi: '再见', pinyin: 'zàijiàn', hanviet: 'Tái kiến', meaning: 'Tạm biệt' },
+  { level: 'HSK 1', hanzi: '在', pinyin: 'zài', hanviet: 'Tại', meaning: 'Ở, đang' },
+  { level: 'HSK 1', hanzi: '怎么', pinyin: 'zěnme', hanviet: 'Trẩm ma', meaning: 'Làm sao, thế nào' },
+  { level: 'HSK 1', hanzi: '怎么样', pinyin: 'zěnmeyàng', hanviet: 'Trẩm ma dạng', meaning: 'Thế nào, ra sao' },
+  { level: 'HSK 1', hanzi: '这', pinyin: 'zhè', hanviet: 'Giá', meaning: 'Đây, này' },
+  { level: 'HSK 1', hanzi: '中国', pinyin: 'Zhōngguó', hanviet: 'Trung Quốc', meaning: 'Trung Quốc' },
+  { level: 'HSK 1', hanzi: '中午', pinyin: 'zhōngwǔ', hanviet: 'Trung ngọ', meaning: 'Buổi trưa' },
+  { level: 'HSK 1', hanzi: '住', pinyin: 'zhù', hanviet: 'Trú', meaning: 'Sống, ở' },
+  { level: 'HSK 1', hanzi: '桌子', pinyin: 'zhuōzi', hanviet: 'Trác tử', meaning: 'Cái bàn' },
+  { level: 'HSK 1', hanzi: '字', pinyin: 'zì', hanviet: 'Tự', meaning: 'Chữ, từ' },
+  { level: 'HSK 1', hanzi: '昨天', pinyin: 'zuótiān', hanviet: 'Tạc thiên', meaning: 'Hôm qua' },
+  { level: 'HSK 1', hanzi: '坐', pinyin: 'zuò', hanviet: 'Tọa', meaning: 'Ngồi, đi (xe/máy bay)' },
+  { level: 'HSK 1', hanzi: '做', pinyin: 'zuò', hanviet: 'Tố', meaning: 'Làm' },
+
+  // HSK 2
+  { level: 'HSK 2', hanzi: '吧', pinyin: 'ba', hanviet: 'Ba', meaning: 'Đi, nhé (trợ từ ngữ khí)' },
+  { level: 'HSK 2', hanzi: '白', pinyin: 'bái', hanviet: 'Bạch', meaning: 'Trắng, màu trắng' },
+  { level: 'HSK 2', hanzi: '百', pinyin: 'bǎi', hanviet: 'Bách', meaning: 'Trăm (100)' },
+  { level: 'HSK 2', hanzi: '帮助', pinyin: 'bāngzhù', hanviet: 'Bang trợ', meaning: 'Giúp đỡ' },
+  { level: 'HSK 2', hanzi: '报纸', pinyin: 'bàozhǐ', hanviet: 'Báo chỉ', meaning: 'Tờ báo' },
+  { level: 'HSK 2', hanzi: '比', pinyin: 'bǐ', hanviet: 'Tỷ', meaning: 'So với' },
+  { level: 'HSK 2', hanzi: '别', pinyin: 'bié', hanviet: 'Biệt', meaning: 'Đừng' },
+  { level: 'HSK 2', hanzi: '长', pinyin: 'cháng', hanviet: 'Trường', meaning: 'Dài' },
+  { level: 'HSK 2', hanzi: '唱歌', pinyin: 'chànggē', hanviet: 'Xướng ca', meaning: 'Hát' },
+  { level: 'HSK 2', hanzi: '出', pinyin: 'chū', hanviet: 'Xuất', meaning: 'Ra, ra ngoài' },
+  { level: 'HSK 2', hanzi: '穿', pinyin: 'chuān', hanviet: 'Xuyên', meaning: 'Mặc, đi (giày, tất)' },
+  { level: 'HSK 2', hanzi: '次', pinyin: 'cì', hanviet: 'Thứ', meaning: 'Lần' },
+  { level: 'HSK 2', hanzi: '从', pinyin: 'cóng', hanviet: 'Tùng', meaning: 'Từ (đâu đến)' },
+  { level: 'HSK 2', hanzi: '错', pinyin: 'cuò', hanviet: 'Thác', meaning: 'Sai, nhầm' },
+  { level: 'HSK 2', hanzi: '打篮球', pinyin: 'dǎ lánqiú', hanviet: 'Đả lam cầu', meaning: 'Đánh bóng rổ' },
+  { level: 'HSK 2', hanzi: '大家', pinyin: 'dàjiā', hanviet: 'Đại gia', meaning: 'Mọi người' },
+  { level: 'HSK 2', hanzi: '到', pinyin: 'dào', hanviet: 'Đáo', meaning: 'Đến, tới' },
+  { level: 'HSK 2', hanzi: '得', pinyin: 'de', hanviet: 'Đắc', meaning: 'Trợ từ trình độ' },
+  { level: 'HSK 2', hanzi: '等', pinyin: 'děng', hanviet: 'Đẳng', meaning: 'Chờ, đợi' },
+  { level: 'HSK 2', hanzi: '弟弟', pinyin: 'dìdi', hanviet: 'Đệ đệ', meaning: 'Em trai' },
+  { level: 'HSK 2', hanzi: '第一', pinyin: 'dì-yī', hanviet: 'Đệ nhất', meaning: 'Thứ nhất, đầu tiên' },
+  { level: 'HSK 2', hanzi: '懂', pinyin: 'dǒng', hanviet: 'Hiểu', meaning: 'Hiểu' },
+  { level: 'HSK 2', hanzi: '对', pinyin: 'duì', hanviet: 'Đối', meaning: 'Đúng, đối với' },
+  { level: 'HSK 2', hanzi: '房间', pinyin: 'fángjiān', hanviet: 'Phòng gian', meaning: 'Căn phòng' },
+  { level: 'HSK 2', hanzi: '非常', pinyin: 'fēicháng', hanviet: 'Phi thường', meaning: 'Vô cùng, rất' },
+  { level: 'HSK 2', hanzi: '服务员', pinyin: 'fúwùyuán', hanviet: 'Phục vụ viên', meaning: 'Nhân viên phục vụ' },
+  { level: 'HSK 2', hanzi: '高', pinyin: 'gāo', hanviet: 'Cao', meaning: 'Cao' },
+  { level: 'HSK 2', hanzi: '告诉', pinyin: 'gàosu', hanviet: 'Cáo tố', meaning: 'Nói cho biết, bảo' },
+  { level: 'HSK 2', hanzi: '哥哥', pinyin: 'gēge', hanviet: 'Ca ca', meaning: 'Anh trai' },
+  { level: 'HSK 2', hanzi: '给', pinyin: 'gěi', hanviet: 'Cấp', meaning: 'Cho, đưa cho' },
+  { level: 'HSK 2', hanzi: '公共汽车', pinyin: 'gōnggòng qìchē', hanviet: 'Công cộng khí xa', meaning: 'Xe buýt' },
+  { level: 'HSK 2', hanzi: '公斤', pinyin: 'gōngjīn', hanviet: 'Công cân', meaning: 'Cân, ki-lô-gam' },
+  { level: 'HSK 2', hanzi: '公司', pinyin: 'gōngsī', hanviet: 'Công ty', meaning: 'Công ty' },
+  { level: 'HSK 2', hanzi: '贵', pinyin: 'guì', hanviet: 'Quý', meaning: 'Đắt, quý' },
+  { level: 'HSK 2', hanzi: '过', pinyin: 'guò', hanviet: 'Quá', meaning: 'Từng (đã qua)' },
+  { level: 'HSK 2', hanzi: '还', pinyin: 'hái', hanviet: 'Hoàn', meaning: 'Vẫn, còn' },
+  { level: 'HSK 2', hanzi: '孩子', pinyin: 'háizi', hanviet: 'Hài tử', meaning: 'Trẻ con, con cái' },
+  { level: 'HSK 2', hanzi: '黑', pinyin: 'hēi', hanviet: 'Hắc', meaning: 'Đen, màu đen' },
+  { level: 'HSK 2', hanzi: '红', pinyin: 'hóng', hanviet: 'Hồng', meaning: 'Đỏ, màu đỏ' },
+  { level: 'HSK 2', hanzi: '欢迎', pinyin: 'huānyíng', hanviet: 'Hoan nghênh', meaning: 'Chào đón, hoan nghênh' },
+  { level: 'HSK 2', hanzi: '回答', pinyin: 'huídá', hanviet: 'Hồi đáp', meaning: 'Trả lời' },
+  { level: 'HSK 2', hanzi: '机场', pinyin: 'jīchǎng', hanviet: 'Cơ trường', meaning: 'Sân bay' },
+  { level: 'HSK 2', hanzi: '鸡蛋', pinyin: 'jīdàn', hanviet: 'Kê đản', meaning: 'Trứng gà' },
+  { level: 'HSK 2', hanzi: '件', pinyin: 'jiàn', hanviet: 'Kiện', meaning: 'Chiếc, áo (lượng từ quần áo/việc)' },
+  { level: 'HSK 2', hanzi: '教室', pinyin: 'jiàoshì', hanviet: 'Giáo thất', meaning: 'Phòng học' },
+  { level: 'HSK 2', hanzi: '姐姐', pinyin: 'jiějie', hanviet: 'Tỷ tỷ', meaning: 'Chị gái' },
+  { level: 'HSK 2', hanzi: '介绍', pinyin: 'jièshào', hanviet: 'Giới thiệu', meaning: 'Giới thiệu' },
+  { level: 'HSK 2', hanzi: '进', pinyin: 'jìn', hanviet: 'Tiến', meaning: 'Vào' },
+  { level: 'HSK 2', hanzi: '近', pinyin: 'jìn', hanviet: 'Cận', meaning: 'Gần' },
+  { level: 'HSK 2', hanzi: '就', pinyin: 'jiù', hanviet: 'Tựu', meaning: 'Thì, chính là' },
+  { level: 'HSK 2', hanzi: '觉得', pinyin: 'juéde', hanviet: 'Giác đắc', meaning: 'Cảm thấy, thấy rằng' },
+  { level: 'HSK 2', hanzi: '咖啡', pinyin: 'kāfēi', hanviet: 'Kha phi', meaning: 'Cà phê' },
+  { level: 'HSK 2', hanzi: '开始', pinyin: 'kāishǐ', hanviet: 'Khai thủy', meaning: 'Bắt đầu' },
+  { level: 'HSK 2', hanzi: '考试', pinyin: 'kǎoshì', hanviet: 'Khảo thí', meaning: 'Kỳ thi, thi' },
+  { level: 'HSK 2', hanzi: '可能', pinyin: 'kěnéng', hanviet: 'Khả năng', meaning: 'Có thể' },
+  { level: 'HSK 2', hanzi: '离', pinyin: 'lí', hanviet: 'Ly', meaning: 'Cách (khoảng cách)' },
+  { level: 'HSK 2', hanzi: '旅游', pinyin: 'lǚyóu', hanviet: 'Lữ du', meaning: 'Du lịch' },
+  { level: 'HSK 2', hanzi: '卖', pinyin: 'mài', hanviet: 'Mại', meaning: 'Bán' },
+  { level: 'HSK 2', hanzi: '慢', pinyin: 'màn', hanviet: 'Mạn', meaning: 'Chậm' },
+  { level: 'HSK 2', hanzi: '忙', pinyin: 'máng', hanviet: 'Mang', meaning: 'Bận' },
+  { level: 'HSK 2', hanzi: '每', pinyin: 'měi', hanviet: 'Mỗi', meaning: 'Mỗi, mọi' },
+  { level: 'HSK 2', hanzi: '妹妹', pinyin: 'mèimei', hanviet: 'Muội muội', meaning: 'Em gái' },
+  { level: 'HSK 2', hanzi: '门', pinyin: 'mén', hanviet: 'Môn', meaning: 'Cửa' },
+  { level: 'HSK 2', hanzi: '牛奶', pinyin: 'niúnǎi', hanviet: 'Ngưu nãi', meaning: 'Sữa bò' },
+  { level: 'HSK 2', hanzi: '旁边', pinyin: 'pángbiān', hanviet: 'Bàng biên', meaning: 'Bên cạnh' },
+  { level: 'HSK 2', hanzi: '跑步', pinyin: 'pǎobù', hanviet: 'Bào bộ', meaning: 'Chạy bộ' },
+  { level: 'HSK 2', hanzi: '便宜', pinyin: 'piányi', hanviet: 'Tiện nghi', meaning: 'Rẻ' },
+  { level: 'HSK 2', hanzi: '票', pinyin: 'piào', hanviet: 'Phiếu', meaning: 'Vé' },
+  { level: 'HSK 2', hanzi: '妻子', pinyin: 'qīzi', hanviet: 'Thê tử', meaning: 'Vợ' },
+  { level: 'HSK 2', hanzi: '起床', pinyin: 'qǐchuáng', hanviet: 'Khởi sàng', meaning: 'Thức dậy' },
+  { level: 'HSK 2', hanzi: '千', pinyin: 'qiān', hanviet: 'Thiên', meaning: 'Nghìn (1000)' },
+  { level: 'HSK 2', hanzi: '晴', pinyin: 'qíng', hanviet: 'Tình', meaning: 'Nắng, trời quang' },
+  { level: 'HSK 2', hanzi: '让', pinyin: 'ràng', hanviet: 'Nhượng', meaning: 'Cho phép, để, nhường' },
+  { level: 'HSK 2', hanzi: '上班', pinyin: 'shàngbān', hanviet: 'Thượng ban', meaning: 'Đi làm' },
+  { level: 'HSK 2', hanzi: '身体', pinyin: 'shēntǐ', hanviet: 'Thân thể', meaning: 'Cơ thể, sức khỏe' },
+  { level: 'HSK 2', hanzi: '生病', pinyin: 'shēngbìng', hanviet: 'Sinh bệnh', meaning: 'Bị bệnh, ốm' },
+  { level: 'HSK 2', hanzi: '生日', pinyin: 'shēngrì', hanviet: 'Sinh nhật', meaning: 'Sinh nhật' },
+  { level: 'HSK 2', hanzi: '时间', pinyin: 'shíjiān', hanviet: 'Thời gian', meaning: 'Thời gian' },
+  { level: 'HSK 2', hanzi: '事情', pinyin: 'shìqing', hanviet: 'Sự tình', meaning: 'Sự việc, công chuyện' },
+  { level: 'HSK 2', hanzi: '手表', pinyin: 'shǒubiǎo', hanviet: 'Thủ biểu', meaning: 'Đồng hồ đeo tay' },
+  { level: 'HSK 2', hanzi: '手机', pinyin: 'shǒujī', hanviet: 'Thủ cơ', meaning: 'Điện thoại di động' },
+  { level: 'HSK 2', hanzi: '送', pinyin: 'sòng', hanviet: 'Tống', meaning: 'Tặng, tiễn' },
+  { level: 'HSK 2', hanzi: '所以', pinyin: 'suǒyǐ', hanviet: 'Sở dĩ', meaning: 'Cho nên, vì thế' },
+  { level: 'HSK 2', hanzi: '它', pinyin: 'tā', hanviet: 'Tha', meaning: 'Nó (chỉ vật/con vật)' },
+  { level: 'HSK 2', hanzi: '踢足球', pinyin: 'tī zúqiú', hanviet: 'Thích túc cầu', meaning: 'Đá bóng' },
+  { level: 'HSK 2', hanzi: '题', pinyin: 'tí', hanviet: 'Đề', meaning: 'Đề bài, câu hỏi' },
+  { level: 'HSK 2', hanzi: '跳舞', pinyin: 'tiàowǔ', hanviet: 'Khiêu vũ', meaning: 'Múa, nhảy múa' },
+  { level: 'HSK 2', hanzi: '外', pinyin: 'wài', hanviet: 'Ngoại', meaning: 'Bên ngoài' },
+  { level: 'HSK 2', hanzi: '完', pinyin: 'wán', hanviet: 'Hoàn', meaning: 'Xong, hết' },
+  { level: 'HSK 2', hanzi: '玩', pinyin: 'wán', hanviet: 'Ngoạn', meaning: 'Chơi' },
+  { level: 'HSK 2', hanzi: '晚上', pinyin: 'wǎnshang', hanviet: 'Vãn thượng', meaning: 'Buổi tối' },
+  { level: 'HSK 2', hanzi: '为什么', pinyin: 'wèishénme', hanviet: 'Vi thập ma', meaning: 'Tại sao' },
+  { level: 'HSK 2', hanzi: '问', pinyin: 'wèn', hanviet: 'Vấn', meaning: 'Hỏi' },
+  { level: 'HSK 2', hanzi: '问题', pinyin: 'wèntí', hanviet: 'Vấn đề', meaning: 'Câu hỏi, vấn đề' },
+  { level: 'HSK 2', hanzi: '西瓜', pinyin: 'xīguā', hanviet: 'Tây qua', meaning: 'Dưa hấu' },
+  { level: 'HSK 2', hanzi: '希望', pinyin: 'xīwàng', hanviet: 'Hy vọng', meaning: 'Hy vọng' },
+  { level: 'HSK 2', hanzi: '洗', pinyin: 'xǐ', hanviet: 'Tẩy', meaning: 'Rửa, giặt' },
+  { level: 'HSK 2', hanzi: '小时', pinyin: 'xiǎoshí', hanviet: 'Tiểu thời', meaning: 'Tiếng, giờ đồng hồ' },
+  { level: 'HSK 2', hanzi: '笑', pinyin: 'xiào', hanviet: 'Tiếu', meaning: 'Cười' },
+  { level: 'HSK 2', hanzi: '新', pinyin: 'xīn', hanviet: 'Tân', meaning: 'Mới' },
+  { level: 'HSK 2', hanzi: '姓', pinyin: 'xìng', hanviet: 'Tính', meaning: 'Họ (họ tên)' },
+  { level: 'HSK 2', hanzi: '休息', pinyin: 'xiūxi', hanviet: 'Hưu tức', meaning: 'Nghỉ ngơi' },
+  { level: 'HSK 2', hanzi: '雪', pinyin: 'xuě', hanviet: 'Tuyết', meaning: 'Tuyết' },
+  { level: 'HSK 2', hanzi: '颜色', pinyin: 'yánsè', hanviet: 'Nhan sắc', meaning: 'Màu sắc' },
+  { level: 'HSK 2', hanzi: '眼睛', pinyin: 'yǎnjing', hanviet: 'Nhãn tình', meaning: 'Mắt' },
+  { level: 'HSK 2', hanzi: '羊肉', pinyin: 'yángròu', hanviet: 'Dương nhục', meaning: 'Thịt cừu/dê' },
+  { level: 'HSK 2', hanzi: '药', pinyin: 'yào', hanviet: 'Dược', meaning: 'Thuốc' },
+  { level: 'HSK 2', hanzi: '要', pinyin: 'yào', hanviet: 'Yếu', meaning: 'Muốn, cần, phải' },
+  { level: 'HSK 2', hanzi: '也', pinyin: 'yě', hanviet: 'Dã', meaning: 'Cũng' },
+  { level: 'HSK 2', hanzi: '一起', pinyin: 'yìqǐ', hanviet: 'Nhất khởi', meaning: 'Cùng nhau' },
+  { level: 'HSK 2', hanzi: '意思', pinyin: 'yìsi', hanviet: 'Ý tư', meaning: 'Ý nghĩa' },
+  { level: 'HSK 2', hanzi: '阴', pinyin: 'yīn', hanviet: 'Âm', meaning: 'U ám, nhiều mây' },
+  { level: 'HSK 2', hanzi: '因为', pinyin: 'yīnwèi', hanviet: 'Nhân vi', meaning: 'Bởi vì' },
+  { level: 'HSK 2', hanzi: '游泳', pinyin: 'yóuyǒng', hanviet: 'Du dũng', meaning: 'Bơi lội' },
+  { level: 'HSK 2', hanzi: '右边', pinyin: 'yòubian', hanviet: 'Hữu biên', meaning: 'Bên phải' },
+  { level: 'HSK 2', hanzi: '鱼', pinyin: 'yú', hanviet: 'Ngư', meaning: 'Con cá' },
+  { level: 'HSK 2', hanzi: '元', pinyin: 'yuán', hanviet: 'Nguyên', meaning: 'Tệ (đơn vị tiền)' },
+  { level: 'HSK 2', hanzi: '远', pinyin: 'yuǎn', hanviet: 'Viễn', meaning: 'Xa' },
+  { level: 'HSK 2', hanzi: '运动', pinyin: 'yùndòng', hanviet: 'Vận động', meaning: 'Vận động, thể thao' },
+  { level: 'HSK 2', hanzi: '再', pinyin: 'zài', hanviet: 'Tái', meaning: 'Lại, nữa' },
+  { level: 'HSK 2', hanzi: '早上', pinyin: 'zǎoshang', hanviet: 'Tảo thượng', meaning: 'Buổi sáng sớm' },
+  { level: 'HSK 2', hanzi: '丈夫', pinyin: 'zhàngfu', hanviet: 'Trượng phu', meaning: 'Chồng' },
+  { level: 'HSK 2', hanzi: '找', pinyin: 'zhǎo', hanviet: 'Trảo', meaning: 'Tìm, thối tiền lẻ' },
+  { level: 'HSK 2', hanzi: '着', pinyin: 'zhe', hanviet: 'Trước', meaning: 'Đang (trợ từ trạng thái)' },
+  { level: 'HSK 2', hanzi: '真', pinyin: 'zhēn', hanviet: 'Chân', meaning: 'Thật, quả thật' },
+  { level: 'HSK 2', hanzi: '正在', pinyin: 'zhèngzài', hanviet: 'Chính tại', meaning: 'Đang' },
+  { level: 'HSK 2', hanzi: '准备', pinyin: 'zhǔnbèi', hanviet: 'Chuẩn bị', meaning: 'Chuẩn bị' },
+  { level: 'HSK 2', hanzi: '自行车', pinyin: 'zìxíngchē', hanviet: 'Tự hành xa', meaning: 'Xe đạp' },
+  { level: 'HSK 2', hanzi: '走', pinyin: 'zǒu', hanviet: 'Tẩu', meaning: 'Đi, đi bộ' },
+  { level: 'HSK 2', hanzi: '最', pinyin: 'zuì', hanviet: 'Tối', meaning: 'Nhất' },
+  { level: 'HSK 2', hanzi: '左边', pinyin: 'zuǒbian', hanviet: 'Tả biên', meaning: 'Bên trái' },
+
+  // HSK 3
+  { level: 'HSK 3', hanzi: '阿姨', pinyin: 'āyí', hanviet: 'A di', meaning: 'Dì, cô, người làm' },
+  { level: 'HSK 3', hanzi: '啊', pinyin: 'a', hanviet: 'A', meaning: 'A, chà (trợ từ cảm thán)' },
+  { level: 'HSK 3', hanzi: '矮', pinyin: 'ǎi', hanviet: 'Ải', meaning: 'Thấp, lùn' },
+  { level: 'HSK 3', hanzi: '爱', pinyin: 'ài', hanviet: 'Ái', meaning: 'Yêu, yêu thích' },
+  { level: 'HSK 3', hanzi: '安静', pinyin: 'ānjìng', hanviet: 'An tĩnh', meaning: 'Yên tĩnh, im lặng' },
+  { level: 'HSK 3', hanzi: '把', pinyin: 'bǎ', hanviet: 'Bả', meaning: 'Cầm, nắm; câu chữ 把' },
+  { level: 'HSK 3', hanzi: '搬', pinyin: 'bān', hanviet: 'Bàn', meaning: 'Chuyển, dời' },
+  { level: 'HSK 3', hanzi: '班', pinyin: 'bān', hanviet: 'Ban', meaning: 'Lớp học, ca làm' },
+  { level: 'HSK 3', hanzi: '办法', pinyin: 'bànfǎ', hanviet: 'Biện pháp', meaning: 'Cách, biện pháp' },
+  { level: 'HSK 3', hanzi: '办公室', pinyin: 'bàngōngshì', hanviet: 'Biện công thất', meaning: 'Văn phòng' },
+  { level: 'HSK 3', hanzi: '半', pinyin: 'bàn', hanviet: 'Bán', meaning: 'Nửa, rưỡi' },
+  { level: 'HSK 3', hanzi: '帮忙', pinyin: 'bāngmáng', hanviet: 'Bang mang', meaning: 'Giúp đỡ' },
+  { level: 'HSK 3', hanzi: '包', pinyin: 'bāo', hanviet: 'Bao', meaning: 'Túi, giỏ, gói' },
+  { level: 'HSK 3', hanzi: '饱', pinyin: 'bǎo', hanviet: 'Bảo', meaning: 'No' },
+  { level: 'HSK 3', hanzi: '北方', pinyin: 'běifāng', hanviet: 'Bắc phương', meaning: 'Miền bắc' },
+  { level: 'HSK 3', hanzi: '被', pinyin: 'bèi', hanviet: 'Bị', meaning: 'Bị, được (câu bị động)' },
+  { level: 'HSK 3', hanzi: '鼻子', pinyin: 'bízi', hanviet: 'Tị tử', meaning: 'Mũi' },
+  { level: 'HSK 3', hanzi: '比较', pinyin: 'bǐjiào', hanviet: 'Tỷ giác', meaning: 'Khá là, so sánh' },
+  { level: 'HSK 3', hanzi: '比赛', pinyin: 'bǐsài', hanviet: 'Tỷ tái', meaning: 'Trận đấu, thi đấu' },
+  { level: 'HSK 3', hanzi: '必须', pinyin: 'bìxū', hanviet: 'Tất tu', meaning: 'Phải, bắt buộc' },
+  { level: 'HSK 3', hanzi: '变化', pinyin: 'biànhuà', hanviet: 'Biến hóa', meaning: 'Thay đổi, biến hóa' },
+  { level: 'HSK 3', hanzi: '表示', pinyin: 'biǎoshì', hanviet: 'Biểu thị', meaning: 'Biểu thị, tỏ ra' },
+  { level: 'HSK 3', hanzi: '表演', pinyin: 'biǎoyǎn', hanviet: 'Biểu diễn', meaning: 'Biểu diễn, trình diễn' },
+  { level: 'HSK 3', hanzi: '别人', pinyin: 'bié rén', hanviet: 'Biệt nhân', meaning: 'Người khác' },
+  { level: 'HSK 3', hanzi: '宾馆', pinyin: 'bīnguǎn', hanviet: 'Tân quán', meaning: 'Khách sạn' },
+  { level: 'HSK 3', hanzi: '冰箱', pinyin: 'bīngxiāng', hanviet: 'Băng sương', meaning: 'Tủ lạnh' },
+  { level: 'HSK 3', hanzi: '才', pinyin: 'cái', hanviet: 'Tài', meaning: 'Mới (muộn/khó)' },
+  { level: 'HSK 3', hanzi: '菜单', pinyin: 'càidān', hanviet: 'Thái đơn', meaning: 'Thực đơn' },
+  { level: 'HSK 3', hanzi: '参加', pinyin: 'cānjiā', hanviet: 'Tham gia', meaning: 'Tham gia' },
+  { level: 'HSK 3', hanzi: '草', pinyin: 'cǎo', hanviet: 'Thảo', meaning: 'Cỏ' },
+  { level: 'HSK 3', hanzi: '层', pinyin: 'céng', hanviet: 'Tầng', meaning: 'Tầng (nhà)' },
+  { level: 'HSK 3', hanzi: '差', pinyin: 'chà', hanviet: 'Sai', meaning: 'Kém, thiếu' },
+  { level: 'HSK 3', hanzi: '超市', pinyin: 'chāoshì', hanviet: 'Siêu thị', meaning: 'Siêu thị' },
+  { level: 'HSK 3', hanzi: '衬衫', pinyin: 'chènshān', hanviet: 'Sấn sam', meaning: 'Áo sơ mi' },
+  { level: 'HSK 3', hanzi: '成绩', pinyin: 'chéngjì', hanviet: 'Thành tích', meaning: 'Thành tích, kết quả' },
+  { level: 'HSK 3', hanzi: '城市', pinyin: 'chéngshì', hanviet: 'Thành thị', meaning: 'Thành phố' },
+  { level: 'HSK 3', hanzi: '迟到', pinyin: 'chídào', hanviet: 'Trì đáo', meaning: 'Đến muộn' },
+  { level: 'HSK 3', hanzi: '出现', pinyin: 'chūxiàn', hanviet: 'Xuất hiện', meaning: 'Xuất hiện' },
+  { level: 'HSK 3', hanzi: '厨房', pinyin: 'chúfáng', hanviet: 'Trù phòng', meaning: 'Phòng bếp' },
+  { level: 'HSK 3', hanzi: '除了', pinyin: 'chúle', hanviet: 'Trừ liễu', meaning: 'Ngoài ra, trừ ra' },
+  { level: 'HSK 3', hanzi: '春', pinyin: 'chūn', hanviet: 'Xuân', meaning: 'Mùa xuân' },
+  { level: 'HSK 3', hanzi: '词典', pinyin: 'cídiǎn', hanviet: 'Từ điển', meaning: 'Từ điển' },
+  { level: 'HSK 3', hanzi: '聪明', pinyin: 'cōngming', hanviet: 'Thông minh', meaning: 'Thông minh' },
+  { level: 'HSK 3', hanzi: '打扫', pinyin: 'dǎsǎo', hanviet: 'Đả tảo', meaning: 'Quét dọn, dọn dẹp' },
+  { level: 'HSK 3', hanzi: '打算', pinyin: 'dǎsuan', hanviet: 'Đả toán', meaning: 'Dự định, tính toán' },
+  { level: 'HSK 3', hanzi: '带', pinyin: 'dài', hanviet: 'Đới', meaning: 'Mang, đem theo' },
+  { level: 'HSK 3', hanzi: '担心', pinyin: 'dānxīn', hanviet: 'Đam tâm', meaning: 'Lo lắng' },
+  { level: 'HSK 3', hanzi: '蛋糕', pinyin: 'dàngāo', hanviet: 'Đản cao', meaning: 'Bánh ngọt, bánh sinh nhật' },
+  { level: 'HSK 3', hanzi: '当然', pinyin: 'dāngrán', hanviet: 'Đương nhiên', meaning: 'Tất nhiên, đương nhiên' },
+  { level: 'HSK 3', hanzi: '地', pinyin: 'de', hanviet: 'Địa', meaning: 'Trợ từ phó từ' },
+  { level: 'HSK 3', hanzi: '灯', pinyin: 'dēng', hanviet: 'Đăng', meaning: 'Đèn' },
+  { level: 'HSK 3', hanzi: '地方', pinyin: 'dìfang', hanviet: 'Địa phương', meaning: 'Nơi, địa điểm' },
+  { level: 'HSK 3', hanzi: '地铁', pinyin: 'dìtiě', hanviet: 'Địa thiết', meaning: 'Tàu điện ngầm' },
+  { level: 'HSK 3', hanzi: '地图', pinyin: 'dìtú', hanviet: 'Địa đồ', meaning: 'Bản đồ' },
+  { level: 'HSK 3', hanzi: '电梯', pinyin: 'diàntī', hanviet: 'Điện thê', meaning: 'Thang máy' },
+  { level: 'HSK 3', hanzi: '电子邮件', pinyin: 'diànzǐ yóujiàn', hanviet: 'Điện tử bưu kiện', meaning: 'Thư điện tử, email' },
+  { level: 'HSK 3', hanzi: '段', pinyin: 'duàn', hanviet: 'Đoạn', meaning: 'Đoạn (thời gian/đoạn văn)' },
+  { level: 'HSK 3', hanzi: '锻炼', pinyin: 'duànliàn', hanviet: 'Đoán luyện', meaning: 'Tập luyện, rèn luyện' },
+  { level: 'HSK 3', hanzi: '发烧', pinyin: 'fāshāo', hanviet: 'Phát thiêu', meaning: 'Sốt' },
+  { level: 'HSK 3', hanzi: '发现', pinyin: 'fāxiàn', hanviet: 'Phát hiện', meaning: 'Phát hiện' },
+  { level: 'HSK 3', hanzi: '方便', pinyin: 'fāngbiàn', hanviet: 'Phương tiện', meaning: 'Thuận tiện, tiện lợi' },
+  { level: 'HSK 3', hanzi: '放心', pinyin: 'fàngxīn', hanviet: 'Phóng tâm', meaning: 'Yên tâm' },
+  { level: 'HSK 3', hanzi: '分', pinyin: 'fēn', hanviet: 'Phân', meaning: 'Điểm số, phút' },
+  { level: 'HSK 3', hanzi: '复习', pinyin: 'fùxí', hanviet: 'Phức tập', meaning: 'Ôn tập' },
+  { level: 'HSK 3', hanzi: '干净', pinyin: 'gānjìng', hanviet: 'Can tịnh', meaning: 'Sạch sẽ' },
+  { level: 'HSK 3', hanzi: '感冒', pinyin: 'gǎnmào', hanviet: 'Cảm mạo', meaning: 'Cảm cúm' },
+  { level: 'HSK 3', hanzi: '感兴趣', pinyin: 'gǎn xìngqù', hanviet: 'Cảm hứng thú', meaning: 'Có hứng thú' },
+  { level: 'HSK 3', hanzi: '刚才', pinyin: 'gāngcái', hanviet: 'Cương tài', meaning: 'Vừa mới, khi nãy' },
+  { level: 'HSK 3', hanzi: '根据', pinyin: 'gēnjù', hanviet: 'Căn cứ', meaning: 'Căn cứ vào, dựa vào' },
+  { level: 'HSK 3', hanzi: '关系', pinyin: 'guānxi', hanviet: 'Quan hệ', meaning: 'Mối quan hệ' },
+  { level: 'HSK 3', hanzi: '关心', pinyin: 'guānxīn', hanviet: 'Quan tâm', meaning: 'Quan tâm' },
+  { level: 'HSK 3', hanzi: '关于', pinyin: 'guānyú', hanviet: 'Quan vu', meaning: 'Về (vấn đề gì)' },
+  { level: 'HSK 3', hanzi: '国家', pinyin: 'guójiā', hanviet: 'Quốc gia', meaning: 'Đất nước, quốc gia' },
+  { level: 'HSK 3', hanzi: '过去', pinyin: 'guòqù', hanviet: 'Quá khứ', meaning: 'Quá khứ, trước đây' },
+  { level: 'HSK 3', hanzi: '害怕', pinyin: 'hàipà', hanviet: 'Hại phạ', meaning: 'Sợ hãi' },
+  { level: 'HSK 3', hanzi: '黑板', pinyin: 'hēibǎn', hanviet: 'Hắc bản', meaning: 'Bảng đen' },
+  { level: 'HSK 3', hanzi: '护照', pinyin: 'hùzhào', hanviet: 'Hộ chiếu', meaning: 'Hộ chiếu' },
+  { level: 'HSK 3', hanzi: '花', pinyin: 'huā', hanviet: 'Hoa', meaning: 'Bông hoa, tiêu (tiền/thời gian)' },
+  { level: 'HSK 3', hanzi: '画', pinyin: 'huà', hanviet: 'Họa', meaning: 'Vẽ, bức tranh' },
+  { level: 'HSK 3', hanzi: '坏', pinyin: 'huài', hanviet: 'Hoại', meaning: 'Hỏng, xấu' },
+  { level: 'HSK 3', hanzi: '环境', pinyin: 'huánjìng', hanviet: 'Hoàn cảnh', meaning: 'Môi trường' },
+  { level: 'HSK 3', hanzi: '换', pinyin: 'huàn', hanviet: 'Hoán', meaning: 'Đổi, thay' },
+  { level: 'HSK 3', hanzi: '黄河', pinyin: 'Huáng Hé', hanviet: 'Hoàng Hà', meaning: 'Sông Hoàng Hà' },
+  { level: 'HSK 3', hanzi: '会议', pinyin: 'huìyì', hanviet: 'Hội nghị', meaning: 'Cuộc họp, hội nghị' },
+  { level: 'HSK 3', hanzi: '或者', pinyin: 'huòzhě', hanviet: 'Hoặc giả', meaning: 'Hoặc là' },
+  { level: 'HSK 3', hanzi: '机会', pinyin: 'jīhuì', hanviet: 'Cơ hội', meaning: 'Cơ hội' },
+  { level: 'HSK 3', hanzi: '极', pinyin: 'jí', hanviet: 'Cực', meaning: 'Cực kỳ, vô cùng' },
+  { level: 'HSK 3', hanzi: '记得', pinyin: 'jìde', hanviet: 'Ký đắc', meaning: 'Nhớ, nhớ rõ' },
+  { level: 'HSK 3', hanzi: '季节', pinyin: 'jìjié', hanviet: 'Quý tiết', meaning: 'Mùa (trong năm)' },
+  { level: 'HSK 3', hanzi: '检查', pinyin: 'jiǎnchá', hanviet: 'Kiểm tra', meaning: 'Kiểm tra' },
+  { level: 'HSK 3', hanzi: '简单', pinyin: 'jiǎndān', hanviet: 'Giản đơn', meaning: 'Đơn giản' },
+  { level: 'HSK 3', hanzi: '健康', pinyin: 'jiànkāng', hanviet: 'Kiện khang', meaning: 'Khỏe mạnh, sức khỏe' },
+  { level: 'HSK 3', hanzi: '见面', pinyin: 'jiànmiàn', hanviet: 'Kiến diện', meaning: 'Gặp mặt' },
+  { level: 'HSK 3', hanzi: '讲', pinyin: 'jiǎng', hanviet: 'Giảng', meaning: 'Nói, giảng giải' },
+  { level: 'HSK 3', hanzi: '脚', pinyin: 'jiǎo', hanviet: 'Cước', meaning: 'Chân' },
+  { level: 'HSK 3', hanzi: '角', pinyin: 'jiǎo', hanviet: 'Góc', meaning: 'Hào (1/10 tệ)' },
+  { level: 'HSK 3', hanzi: '接', pinyin: 'jiē', hanviet: 'Tiếp', meaning: 'Đón, nghe (điện thoại)' },
+  { level: 'HSK 3', hanzi: '街道', pinyin: 'jiēdào', hanviet: 'Nhai đạo', meaning: 'Phố xá, đường phố' },
+  { level: 'HSK 3', hanzi: '节目', pinyin: 'jiémù', hanviet: 'Tiết mục', meaning: 'Chương trình, tiết mục' },
+  { level: 'HSK 3', hanzi: '节日', pinyin: 'jiérì', hanviet: 'Tiết nhật', meaning: 'Ngày lễ, ngày tết' },
+  { level: 'HSK 3', hanzi: '结婚', pinyin: 'jiéhūn', hanviet: 'Kết hôn', meaning: 'Kết hôn, lấy nhau' },
+  { level: 'HSK 3', hanzi: '结束', pinyin: 'jiéshù', hanviet: 'Kết thúc', meaning: 'Kết thúc' },
+  { level: 'HSK 3', hanzi: '解决', pinyin: 'jiějué', hanviet: 'Giải quyết', meaning: 'Giải quyết' },
+  { level: 'HSK 3', hanzi: '借', pinyin: 'jiè', hanviet: 'Tá', meaning: 'Mượn, vay' },
+  { level: 'HSK 3', hanzi: '经常', pinyin: 'jīngcháng', hanviet: 'Kinh thường', meaning: 'Thường xuyên' },
+  { level: 'HSK 3', hanzi: '经过', pinyin: 'jīngguò', hanviet: 'Kinh quá', meaning: 'Trải qua, trôi qua' },
+  { level: 'HSK 3', hanzi: '经理', pinyin: 'jīnglǐ', hanviet: 'Kinh lý', meaning: 'Giám đốc, quản lý' },
+  { level: 'HSK 3', hanzi: '久', pinyin: 'jiǔ', hanviet: 'Cửu', meaning: 'Lâu' },
+  { level: 'HSK 3', hanzi: '旧', pinyin: 'jiù', hanviet: 'Cựu', meaning: 'Cũ' },
+  { level: 'HSK 3', hanzi: '句子', pinyin: 'jùzi', hanviet: 'Cú tử', meaning: 'Câu (ngôn ngữ)' },
+  { level: 'HSK 3', hanzi: '决定', pinyin: 'juédìng', hanviet: 'Quyết định', meaning: 'Quyết định' },
+  { level: 'HSK 3', hanzi: '渴', pinyin: 'kě', hanviet: 'Khát', meaning: 'Khát (nước)' },
+  { level: 'HSK 3', hanzi: '刻', pinyin: 'kè', hanviet: 'Khắc', meaning: '15 phút, khắc' },
+  { level: 'HSK 3', hanzi: '客人', pinyin: 'kèrén', hanviet: 'Khách nhân', meaning: 'Khách, vị khách' },
+  { level: 'HSK 3', hanzi: '空调', pinyin: 'kōngtiáo', hanviet: 'Không điều', meaning: 'Máy điều hòa' },
+  { level: 'HSK 3', hanzi: '口', pinyin: 'kǒu', hanviet: 'Khẩu', meaning: 'Miệng, người (lượng từ gia đình)' },
+  { level: 'HSK 3', hanzi: '哭', pinyin: 'kū', hanviet: 'Khốc', meaning: 'Khóc' },
+  { level: 'HSK 3', hanzi: '裤子', pinyin: 'kùzi', hanviet: 'Khố tử', meaning: 'Cái quần' },
+  { level: 'HSK 3', hanzi: '筷子', pinyin: 'kuàizi', hanviet: 'Khoái tử', meaning: 'Đôi đũa' },
+  { level: 'HSK 3', hanzi: '蓝', pinyin: 'lán', hanviet: 'Lam', meaning: 'Xanh lam, xanh dương' },
+  { level: 'HSK 3', hanzi: '老', pinyin: 'lǎo', hanviet: 'Lão', meaning: 'Già, cũ' },
+  { level: 'HSK 3', hanzi: '离开', pinyin: 'líkāi', hanviet: 'Ly khai', meaning: 'Rời khỏi, rời đi' },
+  { level: 'HSK 3', hanzi: '礼物', pinyin: 'lǐwù', hanviet: 'Lễ vật', meaning: 'Quà tặng' },
+  { level: 'HSK 3', hanzi: '历史', pinyin: 'lìshǐ', hanviet: 'Lịch sử', meaning: 'Lịch sử' },
+  { level: 'HSK 3', hanzi: '脸', pinyin: 'liǎn', hanviet: 'Kiểm', meaning: 'Khuôn mặt' },
+  { level: 'HSK 3', hanzi: '练习', pinyin: 'liànxí', hanviet: 'Luyện tập', meaning: 'Luyện tập, bài tập' },
+  { level: 'HSK 3', hanzi: '辆', pinyin: 'liàng', hanviet: 'Lượng', meaning: 'Chiếc (lượng từ xe)' },
+  { level: 'HSK 3', hanzi: '了解', pinyin: 'liǎojiě', hanviet: 'Liễu giải', meaning: 'Hiểu rõ, tìm hiểu' },
+  { level: 'HSK 3', hanzi: '邻居', pinyin: 'línjū', hanviet: 'Lân cư', meaning: 'Hàng xóm' },
+  { level: 'HSK 3', hanzi: '留学', pinyin: 'liúxué', hanviet: 'Lưu học', meaning: 'Du học' },
+  { level: 'HSK 3', hanzi: '楼', pinyin: 'lóu', hanviet: 'Lâu', meaning: 'Tòa nhà, tầng' },
+  { level: 'HSK 3', hanzi: '绿', pinyin: 'lǜ', hanviet: 'Lục', meaning: 'Xanh lá cây' },
+  { level: 'HSK 3', hanzi: '马', pinyin: 'mǎ', hanviet: 'Mã', meaning: 'Con ngựa' },
+  { level: 'HSK 3', hanzi: '马上', pinyin: 'mǎshàng', hanviet: 'Mã thượng', meaning: 'Ngay lập tức' },
+  { level: 'HSK 3', hanzi: '满意', pinyin: 'mǎnyì', hanviet: 'Mãn ý', meaning: 'Hài lòng' },
+  { level: 'HSK 3', hanzi: '帽子', pinyin: 'màozi', hanviet: 'Mạo tử', meaning: 'Mũ, nón' },
+  { level: 'HSK 3', hanzi: '米', pinyin: 'mǐ', hanviet: 'Mễ', meaning: 'Mét (đơn vị đo)' },
+  { level: 'HSK 3', hanzi: '面包', pinyin: 'miànbāo', hanviet: 'Diện bao', meaning: 'Bánh mì' },
+  { level: 'HSK 3', hanzi: '面条', pinyin: 'miàntiáo', hanviet: 'Diện điều', meaning: 'Mì sợi' },
+  { level: 'HSK 3', hanzi: '明白', pinyin: 'míngbai', hanviet: 'Minh bạch', meaning: 'Rõ ràng, hiểu rõ' },
+  { level: 'HSK 3', hanzi: '拿', pinyin: 'ná', hanviet: 'Nã', meaning: 'Cầm, lấy' },
+  { level: 'HSK 3', hanzi: '奶奶', pinyin: 'nǎinai', hanviet: 'Nãi nãi', meaning: 'Bà nội' },
+  { level: 'HSK 3', hanzi: '南', pinyin: 'nán', hanviet: 'Nam', meaning: 'Phía nam' },
+  { level: 'HSK 3', hanzi: '难', pinyin: 'nán', hanviet: 'Nan', meaning: 'Khó' },
+  { level: 'HSK 3', hanzi: '难过', pinyin: 'nánguò', hanviet: 'Nan quá', meaning: 'Buồn bã, khó qua' },
+  { level: 'HSK 3', hanzi: '年级', pinyin: 'niánjí', hanviet: 'Niên cấp', meaning: 'Lớp, khối lớp' },
+  { level: 'HSK 3', hanzi: '年轻', pinyin: 'niánqīng', hanviet: 'Niên khinh', meaning: 'Trẻ tuổi' },
+  { level: 'HSK 3', hanzi: '鸟', pinyin: 'niǎo', hanviet: 'Điểu', meaning: 'Con chim' },
+  { level: 'HSK 3', hanzi: '努力', pinyin: 'nǔlì', hanviet: 'Nỗ lực', meaning: 'Cố gắng, nỗ lực' },
+  { level: 'HSK 3', hanzi: '爬山', pinyin: 'páshān', hanviet: 'Bà sơn', meaning: 'Leo núi' },
+  { level: 'HSK 3', hanzi: '盘子', pinyin: 'pánzi', hanviet: 'Bàn tử', meaning: 'Cái đĩa' },
+  { level: 'HSK 3', hanzi: '胖', pinyin: 'pàng', hanviet: 'Béo', meaning: 'Mập, béo' },
+  { level: 'HSK 3', hanzi: '皮鞋', pinyin: 'píxié', hanviet: 'Bì hài', meaning: 'Giày da' },
+  { level: 'HSK 3', hanzi: '啤酒', pinyin: 'píjiǔ', hanviet: 'Tửu', meaning: 'Bia' },
+  { level: 'HSK 3', hanzi: '普通话', pinyin: 'pǔtōnghuà', hanviet: 'Phổ thông thoại', meaning: 'Tiếng Phổ thông' },
+  { level: 'HSK 3', hanzi: '其实', pinyin: 'qíshí', hanviet: 'Kỳ thực', meaning: 'Thực ra' },
+  { level: 'HSK 3', hanzi: '其他', pinyin: 'qítā', hanviet: 'Kỳ tha', meaning: 'Khác, cái khác' },
+  { level: 'HSK 3', hanzi: '骑', pinyin: 'qí', hanviet: 'Kỵ', meaning: 'Cưỡi, đi (xe hai bánh)' },
+  { level: 'HSK 3', hanzi: '奇怪', pinyin: 'qíguài', hanviet: 'Kỳ quái', meaning: 'Kỳ lạ, kỳ quái' },
+  { level: 'HSK 3', hanzi: '铅笔', pinyin: 'qiānbǐ', hanviet: 'Duyên bút', meaning: 'Bút chì' },
+  { level: 'HSK 3', hanzi: '清楚', pinyin: 'qīngchu', hanviet: 'Thanh sở', meaning: 'Rõ ràng' },
+  { level: 'HSK 3', hanzi: '秋', pinyin: 'qiū', hanviet: 'Thu', meaning: 'Mùa thu' },
+  { level: 'HSK 3', hanzi: '裙子', pinyin: 'qúnzi', hanviet: 'Quần tử', meaning: 'Váy' },
+  { level: 'HSK 3', hanzi: '热情', pinyin: 'rèqíng', hanviet: 'Nhiệt tình', meaning: 'Nhiệt tình, hăng hái' },
+  { level: 'HSK 3', hanzi: '认为', pinyin: 'rènwéi', hanviet: 'Nhận vi', meaning: 'Cho rằng, nghĩ là' },
+  { level: 'HSK 3', hanzi: '认真', pinyin: 'rènzhēn', hanviet: 'Nhận chân', meaning: 'Nghiêm túc, chăm chỉ' },
+  { level: 'HSK 3', hanzi: '容易', pinyin: 'róngyì', hanviet: 'Dung dịch', meaning: 'Dễ dàng' },
+  { level: 'HSK 3', hanzi: '如果', pinyin: 'rúguǒ', hanviet: 'Như quả', meaning: 'Nếu, nếu như' },
+  { level: 'HSK 3', hanzi: '伞', pinyin: 'sǎn', hanviet: 'Tản', meaning: 'Cái ô, cái dù' },
+  { level: 'HSK 3', hanzi: '上网', pinyin: 'shàngwǎng', hanviet: 'Thượng võng', meaning: 'Lướt mạng, lên mạng' },
+  { level: 'HSK 3', hanzi: '生气', pinyin: 'shēngqì', hanviet: 'Sinh khí', meaning: 'Tức giận' },
+  { level: 'HSK 3', hanzi: '声音', pinyin: 'shēngyīn', hanviet: 'Thanh âm', meaning: 'Âm thanh, tiếng' },
+  { level: 'HSK 3', hanzi: '使', pinyin: 'shǐ', hanviet: 'Sử', meaning: 'Làm cho, khiến cho' },
+  { level: 'HSK 3', hanzi: '世界', pinyin: 'shìjiè', hanviet: 'Thế giới', meaning: 'Thế giới' },
+  { level: 'HSK 3', hanzi: '瘦', pinyin: 'shòu', hanviet: 'Gầy', meaning: 'Gầy, ốm' },
+  { level: 'HSK 3', hanzi: '叔叔', pinyin: 'shūshu', hanviet: 'Thúc thúc', meaning: 'Chú' },
+  { level: 'HSK 3', hanzi: '舒服', pinyin: 'shūfu', hanviet: 'Thư phục', meaning: 'Thoải mái, dễ chịu' },
+  { level: 'HSK 3', hanzi: '树', pinyin: 'shù', hanviet: 'Thụ', meaning: 'Cây' },
+  { level: 'HSK 3', hanzi: '数学', pinyin: 'shùxué', hanviet: 'Số học', meaning: 'Môn toán' },
+  { level: 'HSK 3', hanzi: '刷牙', pinyin: 'shuāyá', hanviet: 'Xát nha', meaning: 'Đánh răng' },
+  { level: 'HSK 3', hanzi: '双', pinyin: 'shuāng', hanviet: 'Song', meaning: 'Đôi, cặp (lượng từ)' },
+  { level: 'HSK 3', hanzi: '水平', pinyin: 'shuǐpíng', hanviet: 'Thủy bình', meaning: 'Trình độ' },
+  { level: 'HSK 3', hanzi: '太阳', pinyin: 'tàiyáng', hanviet: 'Thái dương', meaning: 'Mặt trời' },
+  { level: 'HSK 3', hanzi: '特别', pinyin: 'tèbié', hanviet: 'Đặc biệt', meaning: 'Đặc biệt, rất' },
+  { level: 'HSK 3', hanzi: '疼', pinyin: 'téng', hanviet: 'Đông', meaning: 'Đau' },
+  { level: 'HSK 3', hanzi: '提高', pinyin: 'tígāo', hanviet: 'Đề cao', meaning: 'Nâng cao, cải thiện' },
+  { level: 'HSK 3', hanzi: '体育', pinyin: 'tǐyù', hanviet: 'Thể dục', meaning: 'Thể dục, thể thao' },
+  { level: 'HSK 3', hanzi: '甜', pinyin: 'tián', hanviet: 'Điềm', meaning: 'Ngọt' },
+  { level: 'HSK 3', hanzi: '条', pinyin: 'tiáo', hanviet: 'Điều', meaning: 'Con, sợi (lượng từ dài)' },
+  { level: 'HSK 3', hanzi: '同事', pinyin: 'tóngshì', hanviet: 'Đồng sự', meaning: 'Đồng nghiệp' },
+  { level: 'HSK 3', hanzi: '同意', pinyin: 'tóngyì', hanviet: 'Đồng ý', meaning: 'Đồng ý' },
+  { level: 'HSK 3', hanzi: '头发', pinyin: 'tóufa', hanviet: 'Đầu phát', meaning: 'Tóc' },
+  { level: 'HSK 3', hanzi: '突然', pinyin: 'tūrán', hanviet: 'Đột nhiên', meaning: 'Đột nhiên, bỗng nhiên' },
+  { level: 'HSK 3', hanzi: '图书馆', pinyin: 'túshūguǎn', hanviet: 'Đồ thư quán', meaning: 'Thư viện' },
+  { level: 'HSK 3', hanzi: '腿', pinyin: 'tuǐ', hanviet: 'Thối', meaning: 'Chân, đùi' },
+  { level: 'HSK 3', hanzi: '完成', pinyin: 'wánchéng', hanviet: 'Hoàn thành', meaning: 'Hoàn thành' },
+  { level: 'HSK 3', hanzi: '碗', pinyin: 'wǎn', hanviet: 'Oản', meaning: 'Cái bát, chén' },
+  { level: 'HSK 3', hanzi: '万', pinyin: 'wàn', hanviet: 'Vạn', meaning: 'Mười nghìn (10.000)' },
+  { level: 'HSK 3', hanzi: '忘记', pinyin: 'wàngjì', hanviet: 'Vong ký', meaning: 'Quên' },
+  { level: 'HSK 3', hanzi: '为', pinyin: 'wèi', hanviet: 'Vi', meaning: 'Vì, cho' },
+  { level: 'HSK 3', hanzi: '为了', pinyin: 'wèile', hanviet: 'Vi liễu', meaning: 'Để, nhằm mục đích' },
+  { level: 'HSK 3', hanzi: '位', pinyin: 'wèi', hanviet: 'Vị', meaning: 'Vị (lượng từ lịch sự)' },
+  { level: 'HSK 3', hanzi: '文化', pinyin: 'wénhuà', hanviet: 'Văn hóa', meaning: 'Văn hóa' },
+  { level: 'HSK 3', hanzi: '西', pinyin: 'xī', hanviet: 'Tây', meaning: 'Phía tây' },
+  { level: 'HSK 3', hanzi: '习惯', pinyin: 'xíguàn', hanviet: 'Tập quán', meaning: 'Thói quen, quen với' },
+  { level: 'HSK 3', hanzi: '洗手间', pinyin: 'xǐshǒujiān', hanviet: 'Tẩy thủ gian', meaning: 'Phòng rửa tay, nhà vệ sinh' },
+  { level: 'HSK 3', hanzi: '洗澡', pinyin: 'xǐzǎo', hanviet: 'Tẩy táo', meaning: 'Tắm' },
+  { level: 'HSK 3', hanzi: '夏', pinyin: 'xià', hanviet: 'Hạ', meaning: 'Mùa hè' },
+  { level: 'HSK 3', hanzi: '先', pinyin: 'xiān', hanviet: 'Tiên', meaning: 'Trước, tiên' },
+  { level: 'HSK 3', hanzi: '香蕉', pinyin: 'xiāngjiāo', hanviet: 'Hương tiêu', meaning: 'Quả chuối' },
+  { level: 'HSK 3', hanzi: '相同', pinyin: 'xiāngtóng', hanviet: 'Tương đồng', meaning: 'Giống nhau' },
+  { level: 'HSK 3', hanzi: '相信', pinyin: 'xiāngxìn', hanviet: 'Tương tín', meaning: 'Tin tưởng' },
+  { level: 'HSK 3', hanzi: '像', pinyin: 'xiàng', hanviet: 'Tượng', meaning: 'Giống như' },
+  { level: 'HSK 3', hanzi: '小心', pinyin: 'xiǎoxīn', hanviet: 'Tiểu tâm', meaning: 'Cẩn thận' },
+  { level: 'HSK 3', hanzi: '校长', pinyin: 'xiàozhǎng', hanviet: 'Hiệu trưởng', meaning: 'Hiệu trưởng' },
+  { level: 'HSK 3', hanzi: '鞋', pinyin: 'xié', hanviet: 'Hài', meaning: 'Giày' },
+  { level: 'HSK 3', hanzi: '新闻', pinyin: 'xīnwén', hanviet: 'Tân văn', meaning: 'Tin tức' },
+  { level: 'HSK 3', hanzi: '新鲜', pinyin: 'xīnxiān', hanviet: 'Tân tiên', meaning: 'Tươi mới, trong lành' },
+  { level: 'HSK 3', hanzi: '信', pinyin: 'xìn', hanviet: 'Tín', meaning: 'Lá thư, tin' },
+  { level: 'HSK 3', hanzi: '行李箱', pinyin: 'xínglixiāng', hanviet: 'Hành lý sương', meaning: 'Vali hành lý' },
+  { level: 'HSK 3', hanzi: '兴趣', pinyin: 'xìngqù', hanviet: 'Hứng thú', meaning: 'Hứng thú, sở thích' },
+  { level: 'HSK 3', hanzi: '熊猫', pinyin: 'xióngmāo', hanviet: 'Hùng miêu', meaning: 'Gấu trúc' },
+  { level: 'HSK 3', hanzi: '需要', pinyin: 'xūyào', hanviet: 'Nhu yếu', meaning: 'Cần, nhu cầu' },
+  { level: 'HSK 3', hanzi: '选择', pinyin: 'xuǎnzé', hanviet: 'Tuyển trạch', meaning: 'Lựa chọn' },
+  { level: 'HSK 3', hanzi: '眼镜', pinyin: 'yǎnjìng', hanviet: 'Nhãn kính', meaning: 'Kính mắt' },
+  { level: 'HSK 3', hanzi: '要求', pinyin: 'yāoqiú', hanviet: 'Yêu cầu', meaning: 'Yêu cầu' },
+  { level: 'HSK 3', hanzi: '爷爷', pinyin: 'yéye', hanviet: 'Gia gia', meaning: 'Ông nội' },
+  { level: 'HSK 3', hanzi: '一定', pinyin: 'yídìng', hanviet: 'Nhất định', meaning: 'Nhất định, chắc chắn' },
+  { level: 'HSK 3', hanzi: '一共', pinyin: 'yígòng', hanviet: 'Nhất cộng', meaning: 'Tổng cộng' },
+  { level: 'HSK 3', hanzi: '一会儿', pinyin: 'yíhuìr', hanviet: 'Nhất hội nhi', meaning: 'Một lúc, một lát' },
+  { level: 'HSK 3', hanzi: '一样', pinyin: 'yíyàng', hanviet: 'Nhất dạng', meaning: 'Giống nhau' },
+  { level: 'HSK 3', hanzi: '以后', pinyin: 'yǐhòu', hanviet: 'Dĩ hậu', meaning: 'Sau này, sau khi' },
+  { level: 'HSK 3', hanzi: '以前', pinyin: 'yǐqián', hanviet: 'Dĩ tiền', meaning: 'Trước đây, trước khi' },
+  { level: 'HSK 3', hanzi: '以为', pinyin: 'yǐwéi', hanviet: 'Dĩ vi', meaning: 'Nghĩ rằng, tưởng là' },
+  { level: 'HSK 3', hanzi: '一般', pinyin: 'yìbān', hanviet: 'Nhất ban', meaning: 'Bình thường, thông thường' },
+  { level: 'HSK 3', hanzi: '边...边...', pinyin: 'yìbiān...yìbiān...', hanviet: 'Nhất biên... nhất biên...', meaning: 'Vừa... vừa...' },
+  { level: 'HSK 3', hanzi: '一直', pinyin: 'yìzhí', hanviet: 'Nhất trực', meaning: 'Thẳng, liên tục, luôn' },
+  { level: 'HSK 3', hanzi: '银行', pinyin: 'yínháng', hanviet: 'Ngân hàng', meaning: 'Ngân hàng' },
+  { level: 'HSK 3', hanzi: '音乐', pinyin: 'yīnyuè', hanviet: 'Âm nhạc', meaning: 'Âm nhạc' },
+  { level: 'HSK 3', hanzi: '影响', pinyin: 'yǐngxiǎng', hanviet: 'Ảnh hưởng', meaning: 'Ảnh hưởng' },
+  { level: 'HSK 3', hanzi: '用', pinyin: 'yòng', hanviet: 'Dụng', meaning: 'Dùng, sử dụng' },
+  { level: 'HSK 3', hanzi: '游戏', pinyin: 'yóuxì', hanviet: 'Du hí', meaning: 'Trò chơi, game' },
+  { level: 'HSK 3', hanzi: '有名', pinyin: 'yǒumíng', hanviet: 'Hữu danh', meaning: 'Nổi tiếng' },
+  { level: 'HSK 3', hanzi: '又', pinyin: 'yòu', hanviet: 'Hựu', meaning: 'Lại (đã xảy ra)' },
+  { level: 'HSK 3', hanzi: '遇到', pinyin: 'yùdào', hanviet: 'Ngộ đáo', meaning: 'Gặp phải, đụng độ' },
+  { level: 'HSK 3', hanzi: '元', pinyin: 'yuán', hanviet: 'Nguyên', meaning: 'Tệ' },
+  { level: 'HSK 3', hanzi: '月亮', pinyin: 'yuèliang', hanviet: 'Nguyệt lượng', meaning: 'Mặt trăng' },
+  { level: 'HSK 3', hanzi: '越', pinyin: 'yuè', hanviet: 'Việt', meaning: 'Càng (càng... càng...)' },
+  { level: 'HSK 3', hanzi: '站', pinyin: 'zhàn', hanviet: 'Trạm', meaning: 'Đứng, bến/trạm' },
+  { level: 'HSK 3', hanzi: '张', pinyin: 'zhāng', hanviet: 'Trương', meaning: 'Tờ, tấm (lượng từ phẳng)' },
+  { level: 'HSK 3', hanzi: '照顾', pinyin: 'zhàogu', hanviet: 'Chiếu cố', meaning: 'Chăm sóc, chiếu cố' },
+  { level: 'HSK 3', hanzi: '照片', pinyin: 'zhàopiàn', hanviet: 'Chiếu phiến', meaning: 'Bức ảnh' },
+  { level: 'HSK 3', hanzi: '照相机', pinyin: 'zhàoxiàngjī', hanviet: 'Chiếu tướng cơ', meaning: 'Máy ảnh' },
+  { level: 'HSK 3', hanzi: '只', pinyin: 'zhǐ', hanviet: 'Chỉ', meaning: 'Chỉ (chỉ có)' },
+  { level: 'HSK 3', hanzi: '只', pinyin: 'zhī', hanviet: 'Chích', meaning: 'Con (lượng từ động vật)' },
+  { level: 'HSK 3', hanzi: '中间', pinyin: 'zhōngjiān', hanviet: 'Trung gian', meaning: 'Ở giữa, trung gian' },
+  { level: 'HSK 3', hanzi: '中文', pinyin: 'Zhōngwén', hanviet: 'Trung văn', meaning: 'Tiếng Trung' },
+  { level: 'HSK 3', hanzi: '终于', pinyin: 'zhōngyú', hanviet: 'Chung vu', meaning: 'Cuối cùng' },
+  { level: 'HSK 3', hanzi: '种', pinyin: 'zhǒng', hanviet: 'Chủng', meaning: 'Loại, chủng loại' },
+  { level: 'HSK 3', hanzi: '重要', pinyin: 'zhòngyào', hanviet: 'Trọng yếu', meaning: 'Quan trọng' },
+  { level: 'HSK 3', hanzi: '周末', pinyin: 'zhōumò', hanviet: 'Chu mạt', meaning: 'Cuối tuần' },
+  { level: 'HSK 3', hanzi: '主要', pinyin: 'zhǔyào', hanviet: 'Chủ yếu', meaning: 'Chủ yếu' },
+  { level: 'HSK 3', hanzi: '祝', pinyin: 'zhù', hanviet: 'Chúc', meaning: 'Chúc, chúc mừng' },
+  { level: 'HSK 3', hanzi: '注意', pinyin: 'zhùyì', hanviet: 'Chú ý', meaning: 'Chú ý' },
+  { level: 'HSK 3', hanzi: '字典', pinyin: 'zìdiǎn', hanviet: 'Tự điển', meaning: 'Tự điển' },
+  { level: 'HSK 3', hanzi: '自己', pinyin: 'zìjǐ', hanviet: 'Tự kỷ', meaning: 'Bản thân, tự mình' },
+  { level: 'HSK 3', hanzi: '总是', pinyin: 'zǒngshì', hanviet: 'Tổng thị', meaning: 'Luôn luôn' },
+  { level: 'HSK 3', hanzi: '最近', pinyin: 'zuìjìn', hanviet: 'Tối cận', meaning: 'Dạo này, gần đây' },
+  { level: 'HSK 3', hanzi: '作业', pinyin: 'zuòyè', hanviet: 'Tác nghiệp', meaning: 'Bài tập về nhà' },
+  { level: 'HSK 3', hanzi: '作用', pinyin: 'zuòyòng', hanviet: 'Tác dụng', meaning: 'Tác dụng, ảnh hưởng' }
+];
+
+// ==================== BIẾN TOÀN CỤC ====================
+let words = [];
+let wrongPool = [];
+let currentWord = null;
+let currentMode = 'hanzi';
+let typeMode = null;
+let correct = 0, wrong = 0, total = 0;
+let answered = false;
+let autoNextTimer = null;
+let currentLesson = 'all';
+let speechRate = 0.85;
+let isTimerEnabled = false;
+let timerInterval = null;
+let currentMaxTime = 0;
+let timeLeft = 0;
+
+// BIẾN FLASHCARD
+let fcWords = [];
+let fcIndex = 0;
+let fcAutoSpeak = true;
+let isFlipped = false;
+
+// ==================== PHÁT ÂM ====================
+function speakText(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel(); 
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-CN'; 
+    utterance.rate = speechRate; 
+    window.speechSynthesis.speak(utterance);
+  }
+}
+
+function speakCurrentWord() {
+  if (currentWord && currentWord.hanzi) {
+    if (isTimerEnabled && !answered) clearInterval(timerInterval);
+    speakText(currentWord.hanzi);
+    if (isTimerEnabled && !answered) {
+      setTimeout(() => {
+        if (!answered) startTimer(currentMaxTime, timeLeft);
+      }, 2000);
+    }
+  }
+}
+
+function updateSpeedLabel() {
+  const val = document.getElementById('speedRange').value;
+  document.getElementById('speedLabel').textContent = val + 'x';
+  speechRate = parseFloat(val);
+}
+
+function saveSpeed() {
+  localStorage.setItem('zh_speed_v10', speechRate);
+}
+
+// ==================== LOGIC ĐẾM NGƯỢC ====================
+function toggleTimer() {
+  isTimerEnabled = document.getElementById('timerToggle').checked;
+  localStorage.setItem('zh_timer_v10', isTimerEnabled ? '1' : '0');
+  if (currentWord) nextQuestion();
+}
+
+function startTimer(maxTime, fromTime) {
+  clearInterval(timerInterval);
+  currentMaxTime = maxTime;
+  timeLeft = fromTime;
+  
+  const timerContainer = document.getElementById('timerContainer');
+  const timerBar = document.getElementById('timerBar');
+  
+  if (!isTimerEnabled) {
+    timerContainer.style.display = 'none';
+    return;
+  }
+  
+  timerContainer.style.display = 'block';
+  timerBar.style.width = (timeLeft / maxTime * 100) + '%';
+  timerBar.className = 'timer-bar';
+
+  timerInterval = setInterval(() => {
+    timeLeft -= 0.1;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timeLeft = 0;
+      timerBar.style.width = '0%';
+      handleTimeout();
+    } else {
+      timerBar.style.width = (timeLeft / maxTime * 100) + '%';
+      if (timeLeft / maxTime < 0.25) timerBar.className = 'timer-bar danger';
+      else if (timeLeft / maxTime < 0.6) timerBar.className = 'timer-bar warning';
+    }
+  }, 100);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('timerBar').style.width = '0%';
+}
+
+function handleTimeout() {
+  if (answered) return;
+  answered = true;
+  total++;
+  wrong++;
+  updateStats();
+  addToWrongPool();
+  
+  let correctAns = '';
+  const effectiveMode = currentMode === 'wrong' ? 'hanzi' : currentMode;
+
+  if (typeMode === 'hanzi') correctAns = currentWord.hanzi;
+  else if (typeMode === 'pinyin') correctAns = currentWord.pinyin;
+  else if (effectiveMode === 'hanzi') correctAns = currentWord.hanzi;
+  else if (effectiveMode === 'pinyin') correctAns = currentWord.pinyin;
+  else correctAns = currentWord.meaning;
+
+  document.getElementById('answerReveal').textContent = '⏰ Hết giờ! Đáp án: ' + correctAns;
+  
+  document.querySelectorAll('#optionsBox button').forEach(b => {
+    if (b.textContent === correctAns) b.classList.add('correct');
+    b.disabled = true;
+  });
+  
+  const input = document.getElementById('typeInput');
+  if (input) {
+    input.disabled = true;
+    input.classList.add('wrong');
+  }
+  
+  setNextButtonEnabled(true);
+}
+
+// ==================== KHỞI TẠO ====================
+function loadFromStorage() {
+  const savedSpeed = localStorage.getItem('zh_speed_v10');
+  if (savedSpeed) {
+    speechRate = parseFloat(savedSpeed);
+    document.getElementById('speedRange').value = speechRate;
+    updateSpeedLabel();
+  }
+
+  const savedTimer = localStorage.getItem('zh_timer_v10');
+  if (savedTimer === '1') {
+    isTimerEnabled = true;
+    document.getElementById('timerToggle').checked = true;
+  }
+
+  const saved = localStorage.getItem('zh_words_v10');
+  if (saved) {
+    try { words = JSON.parse(saved); } catch(e) { words = []; }
+  }
+  if (words.length === 0 && defaultWords.length > 0) {
+    words = defaultWords.slice();
+    localStorage.setItem('zh_words_v10', JSON.stringify(words));
+  }
+  
+  const savedWrong = localStorage.getItem('zh_wrong_v10');
+  if (savedWrong) { try { wrongPool = JSON.parse(savedWrong); } catch(e) { wrongPool = []; } }
+  
+  const savedTypeMode = localStorage.getItem('zh_typemode_v10');
+  if (savedTypeMode === 'hanzi' || savedTypeMode === 'pinyin') typeMode = savedTypeMode;
+  
+  const savedLesson = localStorage.getItem('zh_lesson_v10');
+  if (savedLesson) {
+    currentLesson = savedLesson;
+    document.getElementById('lessonSelect').value = currentLesson;
+    document.getElementById('fcLessonSelect').value = currentLesson;
+  }
+
+  updateToggleButtons();
+  updateUI();
+}
+
+function saveAll() {
+  localStorage.setItem('zh_words_v10', JSON.stringify(words));
+  localStorage.setItem('zh_wrong_v10', JSON.stringify(wrongPool));
+}
+
+function changeLesson() {
+  currentLesson = document.getElementById('lessonSelect').value;
+  document.getElementById('fcLessonSelect').value = currentLesson;
+  localStorage.setItem('zh_lesson_v10', currentLesson);
+  updateUI();
+  nextQuestion();
+  initFlashcards();
+}
+
+function changeFcLesson() {
+  currentLesson = document.getElementById('fcLessonSelect').value;
+  document.getElementById('lessonSelect').value = currentLesson;
+  localStorage.setItem('zh_lesson_v10', currentLesson);
+  updateUI();
+  initFlashcards();
+}
+
+// ==================== NẠP TỪ ====================
+function loadWords(appendMode) {
+  const text = document.getElementById('inputArea').value.trim();
+  if (!text) { alert('Vui lòng nhập list từ!'); return; }
+  const lines = text.split('\n').filter(l => l.trim());
+  const newWords = [];
+  for (const line of lines) {
+    let parts = line.split(/[|,\t]/);
+    parts = parts.map(p => p.trim()).filter(p => p);
+    if (parts.length >= 3) {
+      newWords.push({ level: 'Tự nhập', hanzi: parts[0], pinyin: parts[1], hanviet: '', meaning: parts[2] });
+    }
+  }
+  if (newWords.length === 0) { alert('Định dạng sai. Cần: Hán tự | Pinyin | Nghĩa'); return; }
+  applyNewWords(newWords, appendMode);
+}
+
+function loadExcel(event, appendMode) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '' });
+      let startIdx = 0;
+      if (rows.length && /hán|hanzi|pinyin/i.test(String(rows[0][0] || ''))) startIdx = 1;
+      const newWords = [];
+      for (let i = startIdx; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || !r[0]) continue;
+        let level = 'Tự nhập', hanzi = '', pinyin = '', hanviet = '', meaning = '';
+        if (String(r[0]).startsWith('HSK')) {
+          level = String(r[0]).trim(); hanzi = String(r[1]||'').trim(); pinyin = String(r[2]||'').trim(); hanviet = String(r[3]||'').trim(); meaning = String(r[4]||'').trim();
+        } else {
+          hanzi = String(r[0]).trim(); pinyin = String(r[1]||'').trim(); meaning = String(r[2]||'').trim();
+        }
+        if (hanzi && pinyin && meaning) newWords.push({ level, hanzi, pinyin, hanviet, meaning });
+      }
+      if (newWords.length === 0) { alert('Không đọc được dữ liệu.'); return; }
+      applyNewWords(newWords, appendMode);
+      event.target.value = '';
+    } catch (err) { alert('Lỗi đọc file: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function applyNewWords(newWords, appendMode) {
+  if (appendMode) {
+    const existing = new Set(words.map(w => w.hanzi + '|' + w.pinyin));
+    let added = 0;
+    for (const w of newWords) {
+      const key = w.hanzi + '|' + w.pinyin;
+      if (!existing.has(key)) { words.push(w); existing.add(key); added++; }
+    }
+    alert('✅ Đã thêm ' + added + ' từ.');
+  } else {
+    if (!confirm('Thay thế toàn bộ list hiện tại?')) return;
+    words = newWords;
+    alert('✅ Đã thay thế bằng ' + words.length + ' từ!');
+  }
+  saveAll();
+  updateUI();
+  showTab('quiz');
+}
+
+function clearWords() {
+  if (confirm('Xóa hết list từ?')) {
+    words = [];
+    saveAll();
+    updateUI();
+  }
+}
+
+function restoreDefaults() {
+  if (!confirm('Khôi phục list mặc định?')) return;
+  words = defaultWords.slice();
+  saveAll();
+  updateUI();
+}
+
+// ==================== CẬP NHẬT UI ====================
+function getFilteredPool() {
+  if (currentLesson === 'all') return words;
+  return words.filter(w => w.level === currentLesson);
+}
+
+function updateUI() {
+  document.getElementById('countInfo').textContent = words.length ? '(' + words.length + ' từ)' : '';
+  document.getElementById('listCount').textContent = words.length;
+  
+  document.getElementById('wordTable').innerHTML = words.map((w, index) =>
+    '<tr><td>' + w.level + '</td><td style="font-size:22px;">' + w.hanzi + '</td><td>' + w.pinyin + '</td><td>' + (w.hanviet || '-') + '</td><td>' + w.meaning + '</td><td><button onclick="speakText(\'' + w.hanzi + '\')" style="background:none; border:none; cursor:pointer; font-size:16px;">🔊</button></td></tr>'
+  ).join('');
+  
+  document.getElementById('wrongPoolCount').textContent = wrongPool.length;
+  
+  const pool = getFilteredPool();
+  const lessonCountEl = document.getElementById('lessonCount');
+  if (currentLesson === 'all') lessonCountEl.textContent = '(Tổng: ' + pool.length + ' từ)';
+  else lessonCountEl.textContent = '(Có: ' + pool.length + ' từ)';
+
+  if (words.length > 0 && !currentWord) nextQuestion();
+}
+
+function showTab(name) {
+  ['input','quiz','flashcard','list'].forEach(t => {
+    document.getElementById('tab-' + t).classList.add('hidden');
+  });
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  if (name === 'quiz' && !currentWord && words.length) nextQuestion();
+  if (name === 'flashcard') initFlashcards();
+}
+
+// ==================== CHẾ ĐỘ HỌC ====================
+function setMode(mode) {
+  currentMode = mode;
+  typeMode = null;
+  localStorage.setItem('zh_typemode_v10', '');
+  updateToggleButtons();
+  document.querySelectorAll('.tabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  nextQuestion();
+}
+
+function toggleType(kind) {
+  if (typeMode === kind) {
+    typeMode = null;
+    localStorage.setItem('zh_typemode_v10', '');
+  } else {
+    typeMode = kind;
+    localStorage.setItem('zh_typemode_v10', kind);
+  }
+  updateToggleButtons();
+  document.getElementById('optionsBox').innerHTML = '';
+  document.getElementById('answerReveal').textContent = '';
+  nextQuestion();
+}
+
+function updateToggleButtons() {
+  const btnH = document.getElementById('typeHanziBtn');
+  const btnP = document.getElementById('typePinyinBtn');
+  btnH.classList.toggle('on', typeMode === 'hanzi');
+  btnP.classList.toggle('on', typeMode === 'pinyin');
+  btnH.textContent = typeMode === 'hanzi'
+    ? '⌨️ Đang gõ Hán tự (hiện Nghĩa) — bấm để tắt'
+    : '⌨️ Gõ Hán tự (hiện Nghĩa)';
+  btnP.textContent = typeMode === 'pinyin'
+    ? '⌨️ Đang gõ Pinyin (hiện Hán tự + Nghĩa) — bấm để tắt'
+    : '⌨️ Gõ Pinyin (hiện Hán tự + Nghĩa)';
+}
+
+// ĐÃ XÓA HÀM BỎ DẤU, BẮT BUỘC GÕ ĐÚNG DẤU
+function normalize(str, mode) {
+  let s = String(str).trim();
+  if (mode === 'pinyin') {
+    s = s.replace(/\s+/g, ''); // Giữ nguyên dấu thanh
+  } else if (mode === 'meaning') {
+    s = s.toLowerCase().replace(/\s+/g, ' ').trim();
+  } else {
+    s = s.replace(/\s+/g, '');
+  }
+  return s;
+}
+
+function setNextButtonEnabled(enabled) {
+  document.getElementById('nextBtn').classList.toggle('highlight', enabled);
+}
+
+function cancelAutoNext() {
+  if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+}
+
+// ==================== TẠO CÂU HỎI ====================
+function nextQuestion() {
+  cancelAutoNext();
+  stopTimer();
+  setNextButtonEnabled(false);
+  
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+  let pool = getFilteredPool();
+  
+  if (currentMode === 'wrong' && !typeMode) {
+    const filteredWrongPool = wrongPool.filter(w => {
+      if (currentLesson === 'all') return true;
+      return w.level === currentLesson;
+    });
+
+    if (filteredWrongPool.length === 0) {
+      document.getElementById('promptText').textContent = '🎉 Không có từ sai!';
+      document.getElementById('subText').textContent = '';
+      document.getElementById('optionsBox').innerHTML = '';
+      document.getElementById('optionsBox').classList.add('hidden');
+      document.getElementById('typeBox').classList.add('hidden');
+      document.getElementById('answerReveal').textContent = '';
+      document.getElementById('speakBtn').classList.add('hidden');
+      return;
+    }
+    pool = filteredWrongPool;
+  }
+
+  if (pool.length === 0) {
+    document.getElementById('promptText').textContent = 'Chưa có từ nào';
+    document.getElementById('subText').textContent = '';
+    document.getElementById('optionsBox').innerHTML = '';
+    document.getElementById('optionsBox').classList.add('hidden');
+    document.getElementById('typeBox').classList.add('hidden');
+    document.getElementById('answerReveal').textContent = '';
+    document.getElementById('speakBtn').classList.add('hidden');
+    return;
+  }
+
+  answered = false;
+  currentWord = pool[Math.floor(Math.random() * pool.length)];
+
+  const promptEl = document.getElementById('promptText');
+  const subEl = document.getElementById('subText');
+  const speakBtn = document.getElementById('speakBtn');
+  document.getElementById('answerReveal').textContent = '';
+
+  const optionsBox = document.getElementById('optionsBox');
+  const typeBox = document.getElementById('typeBox');
+  const input = document.getElementById('typeInput');
+
+  speakBtn.classList.remove('hidden');
+
+  if (typeMode === 'hanzi') {
+    promptEl.textContent = currentWord.meaning;
+    subEl.textContent = '';
+    optionsBox.innerHTML = '';
+    optionsBox.classList.add('hidden');
+    typeBox.classList.remove('hidden');
+    input.value = '';
+    input.classList.remove('correct', 'wrong');
+    input.disabled = false;
+    setTimeout(() => input.focus(), 50);
+    startTimer(20, 20); // GÕ ĐÁP ÁN: 20 GIÂY
+    return;
+  }
+
+  if (typeMode === 'pinyin') {
+    promptEl.textContent = currentWord.hanzi;
+    subEl.textContent = currentWord.meaning;
+    optionsBox.innerHTML = '';
+    optionsBox.classList.add('hidden');
+    typeBox.classList.remove('hidden');
+    input.value = '';
+    input.classList.remove('correct', 'wrong');
+    input.disabled = false;
+    setTimeout(() => input.focus(), 50);
+    startTimer(20, 20); // GÕ ĐÁP ÁN: 20 GIÂY
+    return;
+  }
+
+  typeBox.classList.add('hidden');
+  input.value = '';
+  input.classList.remove('correct', 'wrong');
+
+  const effectiveMode = currentMode === 'wrong' ? 'hanzi' : currentMode;
+
+  if (effectiveMode === 'hanzi') {
+    promptEl.textContent = currentWord.pinyin;
+    subEl.textContent = currentWord.meaning;
+  } else if (effectiveMode === 'pinyin') {
+    promptEl.textContent = currentWord.hanzi;
+    subEl.textContent = currentWord.meaning;
+  } else {
+    promptEl.textContent = currentWord.hanzi;
+    subEl.textContent = currentWord.pinyin;
+  }
+
+  const key = effectiveMode === 'hanzi' ? 'hanzi' : effectiveMode === 'pinyin' ? 'pinyin' : 'meaning';
+  const correctAns = currentWord[key];
+
+  optionsBox.classList.remove('hidden');
+  optionsBox.innerHTML = '';
+
+  const poolAll = words.filter(w => w[key] !== correctAns);
+  const shuffled = poolAll.sort(() => Math.random() - 0.5).slice(0, 3);
+  const options = [correctAns, ...shuffled.map(w => w[key])].sort(() => Math.random() - 0.5);
+
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(btn, opt, correctAns);
+    optionsBox.appendChild(btn);
+  });
+  
+  startTimer(10, 10); // TRẮC NGHIỆM: 10 GIÂY
+}
+
+// ==================== KIỂM TRA TRẮC NGHIỆM ====================
+function checkAnswer(btn, chosen, correctAns) {
+  if (answered) return;
+  answered = true;
+  total++;
+  stopTimer();
+
+  const allBtns = document.querySelectorAll('#optionsBox button');
+  allBtns.forEach(b => {
+    b.disabled = true;
+    if (b.textContent === correctAns) b.classList.add('correct');
+  });
+
+  if (chosen === correctAns) {
+    correct++;
+    updateStats();
+    autoNextTimer = setTimeout(() => nextQuestion(), 800);
+  } else {
+    wrong++;
+    btn.classList.add('wrong');
+    addToWrongPool();
+    updateStats();
+    setNextButtonEnabled(true);
+  }
+}
+
+// ==================== KIỂM TRA GÕ ĐÁP ÁN ====================
+function checkTyped() {
+  if (answered) return;
+  const input = document.getElementById('typeInput');
+  const userAns = input.value;
+  if (!userAns.trim()) return;
+
+  let key, correctAns;
+  if (typeMode === 'hanzi') {
+    key = 'hanzi';
+    correctAns = currentWord.hanzi;
+  } else if (typeMode === 'pinyin') {
+    key = 'pinyin';
+    correctAns = currentWord.pinyin;
+  } else {
+    return;
+  }
+
+  answered = true;
+  total++;
+  stopTimer();
+
+  const isCorrect = normalize(userAns, key) === normalize(correctAns, key);
+
+  input.disabled = true;
+  if (isCorrect) {
+    correct++;
+    input.classList.add('correct');
+    document.getElementById('answerReveal').textContent = '✅ Chính xác!';
+    updateStats();
+    autoNextTimer = setTimeout(() => nextQuestion(), 800);
+  } else {
+    wrong++;
+    input.classList.add('wrong');
+    document.getElementById('answerReveal').textContent = '❌ Sai. Đáp án đúng: ' + correctAns;
+    addToWrongPool();
+    updateStats();
+    setNextButtonEnabled(true);
+  }
+}
+
+// ==================== LOGIC FLASHCARD ====================
+function initFlashcards() {
+  fcWords = getFilteredPool();
+  fcIndex = 0;
+  isFlipped = false;
+  document.getElementById('flashcardContainer').classList.remove('flipped');
+  updateFlashcardUI();
+}
+
+function updateFlashcardUI() {
+  if (fcWords.length === 0) {
+    document.getElementById('fcFrontHanzi').textContent = 'Trống';
+    document.getElementById('fcProgress').textContent = 'Thẻ 0 / 0';
+    return;
+  }
+  if (fcIndex >= fcWords.length) fcIndex = 0;
+  if (fcIndex < 0) fcIndex = fcWords.length - 1;
+
+  const w = fcWords[fcIndex];
+  document.getElementById('fcFrontHanzi').textContent = w.hanzi;
+  document.getElementById('fcFrontHanviet').textContent = w.hanviet || '';
+  document.getElementById('fcBackPinyin').textContent = w.pinyin;
+  document.getElementById('fcBackMeaning').textContent = w.meaning;
+  document.getElementById('fcProgress').textContent = `Thẻ ${fcIndex + 1} / ${fcWords.length}`;
+
+  if (isFlipped) {
+    document.getElementById('flashcardContainer').classList.add('flipped');
+  } else {
+    document.getElementById('flashcardContainer').classList.remove('flipped');
+    if (fcAutoSpeak) speakText(w.hanzi);
+  }
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('flashcardContainer').classList.toggle('flipped');
+}
+
+function nextCard() {
+  fcIndex++;
+  isFlipped = false;
+  updateFlashcardUI();
+}
+
+function prevCard() {
+  fcIndex--;
+  isFlipped = false;
+  updateFlashcardUI();
+}
+
+function speakCurrentCard() {
+  if (fcWords.length > 0) speakText(fcWords[fcIndex].hanzi);
+}
+
+function saveFcSettings() {
+  fcAutoSpeak = document.getElementById('fcAutoSpeak').checked;
+}
+
+// ==================== HÀM PHỤ ====================
+function addToWrongPool() {
+  if (!wrongPool.some(w => w.hanzi === currentWord.hanzi && w.pinyin === currentWord.pinyin)) {
+    wrongPool.push({ level: currentWord.level, hanzi: currentWord.hanzi, pinyin: currentWord.pinyin, hanviet: currentWord.hanviet, meaning: currentWord.meaning });
+    document.getElementById('wrongPoolCount').textContent = wrongPool.length;
+    saveAll();
+  }
+}
+
+function updateStats() {
+  document.getElementById('correctCount').textContent = correct;
+  document.getElementById('wrongCount').textContent = wrong;
+  document.getElementById('totalCount').textContent = total;
+}
+
+function resetStats() {
+  correct = 0; wrong = 0; total = 0;
+  updateStats();
+}
+
+function resetWrongPool() {
+  if (confirm('Xóa toàn bộ danh sách từ sai?')) {
+    wrongPool = [];
+    saveAll();
+    document.getElementById('wrongPoolCount').textContent = 0;
+  }
+}
+
+// ==================== KHỞI ĐỘNG ====================
+loadFromStorage();
+</script>
+
+</body>
+</html>
