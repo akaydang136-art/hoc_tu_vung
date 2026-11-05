@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sổ tay Từ vựng HSK 1-2-3 (Ver 8)</title>
+<title>Sổ tay Từ vựng HSK 1-2-3 (Ver 8.1)</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
@@ -45,7 +45,6 @@
   .question .prompt { font-size: 40px; margin-bottom: 6px; display: flex; justify-content: center; align-items: center; gap: 12px; }
   .question .sub { font-size: 17px; color: #666; }
   
-  /* THANH ĐẾM NGƯỢC (MỚI) */
   .timer-container { height: 10px; background: #eee; border-radius: 5px; margin-top: 15px; overflow: hidden; display: none; }
   .timer-bar { height: 100%; width: 100%; background: #2ecc71; transition: width 0.1s linear, background-color 0.3s; }
   .timer-bar.warning { background: #f39c12; }
@@ -186,7 +185,6 @@
       <div class="sub" id="subText"></div>
     </div>
     
-    <!-- THANH ĐẾM NGƯỢC -->
     <div class="timer-container" id="timerContainer">
       <div class="timer-bar" id="timerBar"></div>
     </div>
@@ -226,7 +224,7 @@
 
 <script>
 // ============================================================
-// LIST TỪ MẶC ĐỊNH HSK 1-2-3 (Rút gọn để chèn code, bạn giữ nguyên mảng này nhé)
+// LIST TỪ MẶC ĐỊNH HSK 1-2-3
 // ============================================================
 const defaultWords = [
   // HSK 1
@@ -796,14 +794,12 @@ let answered = false;
 let autoNextTimer = null;
 let currentLesson = 'all';
 let speechRate = 0.85;
-
-// BIẾN ĐẾM NGƯỢC
 let isTimerEnabled = false;
 let timerInterval = null;
 let currentMaxTime = 0;
 let timeLeft = 0;
 
-// ==================== HÀM PHÁT ÂM & THỜI GIAN ====================
+// ==================== HÀM PHÁT ÂM ====================
 function speakText(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel(); 
@@ -818,10 +814,8 @@ function speakText(text) {
 
 function speakCurrentWord() {
   if (currentWord && currentWord.hanzi) {
-    // Tạm dừng đồng hồ khi nghe phát âm để không bị mất giây
     if (isTimerEnabled && !answered) clearInterval(timerInterval);
     speakText(currentWord.hanzi);
-    // Đợi âm thanh đọc xong (ước lượng 2 giây) rồi mới chạy lại đồng hồ
     if (isTimerEnabled && !answered) {
       setTimeout(() => {
         if (!answered) startTimer(currentMaxTime, timeLeft);
@@ -850,7 +844,7 @@ function saveSpeed() {
 function toggleTimer() {
   isTimerEnabled = document.getElementById('timerToggle').checked;
   localStorage.setItem('zh_timer_v8', isTimerEnabled ? '1' : '0');
-  if (currentWord) nextQuestion(); // Reset lại câu hỏi khi bật/tắt
+  if (currentWord) nextQuestion();
 }
 
 function startTimer(maxTime, fromTime) {
@@ -868,7 +862,7 @@ function startTimer(maxTime, fromTime) {
   
   timerContainer.style.display = 'block';
   timerBar.style.width = (timeLeft / maxTime * 100) + '%';
-  timerBar.className = 'timer-bar'; // Reset màu
+  timerBar.className = 'timer-bar';
 
   timerInterval = setInterval(() => {
     timeLeft -= 0.1;
@@ -912,13 +906,11 @@ function handleTimeout() {
 
   document.getElementById('answerReveal').textContent = '⏰ Hết giờ! Đáp án đúng: ' + correctAns;
   
-  // Khóa các nút trắc nghiệm
   document.querySelectorAll('#optionsBox button').forEach(b => {
     if (b.textContent === correctAns) b.classList.add('correct');
     b.disabled = true;
   });
   
-  // Khóa ô nhập text
   const input = document.getElementById('typeInput');
   if (input) {
     input.disabled = true;
@@ -1164,27 +1156,18 @@ function updateToggleButtons() {
     : '⌨️ Gõ Pinyin (hiện Hán tự + Nghĩa)';
 }
 
+// ĐÃ XÓA HÀM BỎ DẤU, BẮT BUỘC GÕ ĐÚNG DẤU
 function normalize(str, mode) {
   let s = String(str).trim();
   if (mode === 'pinyin') {
     s = s.toLowerCase().replace(/\s+/g, '');
-    s = removeTones(s);
+    // Không gọi hàm removeTones(s) nữa
   } else if (mode === 'meaning') {
     s = s.toLowerCase().replace(/\s+/g, ' ').trim();
   } else {
     s = s.replace(/\s+/g, '');
   }
   return s;
-}
-
-function removeTones(s) {
-  const map = {
-    'ā':'a','á':'a','ǎ':'a','à':'a','ē':'e','é':'e','ě':'e','è':'e',
-    'ī':'i','í':'i','ǐ':'i','ì':'i','ō':'o','ó':'o','ǒ':'o','ò':'o',
-    'ū':'u','ú':'u','ǔ':'u','ù':'u','ǖ':'v','ǘ':'v','ǚ':'v','ǜ':'v',
-    'ü':'v'
-  };
-  return s.replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/g, ch => map[ch] || ch);
 }
 
 function setNextButtonEnabled(enabled) {
@@ -1259,7 +1242,7 @@ function nextQuestion() {
     input.classList.remove('correct', 'wrong');
     input.disabled = false;
     setTimeout(() => input.focus(), 50);
-    startTimer(15, 15); // GÕ ĐÁP ÁN: 15 GIÂY
+    startTimer(20, 20); // GÕ ĐÁP ÁN: 20 GIÂY
     return;
   }
 
@@ -1273,7 +1256,7 @@ function nextQuestion() {
     input.classList.remove('correct', 'wrong');
     input.disabled = false;
     setTimeout(() => input.focus(), 50);
-    startTimer(15, 15); // GÕ ĐÁP ÁN: 15 GIÂY
+    startTimer(20, 20); // GÕ ĐÁP ÁN: 20 GIÂY
     return;
   }
 
@@ -1311,7 +1294,7 @@ function nextQuestion() {
     optionsBox.appendChild(btn);
   });
   
-   startTimer(10, 10); // TRẮC NGHIỆM: 10 GIÂY
+  startTimer(10, 10); // TRẮC NGHIỆM: 10 GIÂY
 }
 
 // ==================== KIỂM TRA TRẮC NGHIỆM ====================
