@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sổ tay Từ vựng Tiếng Trung (Ver 6)</title>
+<title>Sổ tay Từ vựng HSK 2 (Theo Bài)</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 <style>
   * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
   body { max-width: 860px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
@@ -40,19 +41,28 @@
   .tabs button { flex: 1; background: #ecf0f1; min-width: 100px; color: #333; }
   .tabs button.active { background: #c0392b; color: white; }
   .hidden { display: none !important; }
-  .question { text-align: center; padding: 20px 0; }
+  
+  .question { text-align: center; padding: 20px 0 10px 0; }
   .question .prompt { font-size: 40px; margin-bottom: 6px; display: flex; justify-content: center; align-items: center; gap: 12px; }
   .question .sub { font-size: 17px; color: #666; }
+  
+  .timer-container { height: 10px; background: #eee; border-radius: 5px; margin-top: 15px; overflow: hidden; display: none; }
+  .timer-bar { height: 100%; width: 100%; background: #2ecc71; transition: width 0.1s linear, background-color 0.3s; }
+  .timer-bar.warning { background: #f39c12; }
+  .timer-bar.danger { background: #e74c3c; }
+  
   .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
   .options button { padding: 16px; font-size: 20px; background: white; border: 2px solid #ddd; }
   .options button:hover { border-color: #c0392b; }
   .options button.correct { background: #2ecc71; color: white; border-color: #2ecc71; }
   .options button.wrong { background: #e74c3c; color: white; border-color: #e74c3c; }
-  .stats { display: flex; gap: 12px; justify-content: center; font-size: 15px; flex-wrap: wrap; }
+  .stats { display: flex; gap: 12px; justify-content: center; font-size: 15px; flex-wrap: wrap; margin-bottom: 10px;}
   .stats span { padding: 6px 12px; background: #ecf0f1; border-radius: 6px; }
-  table { width: 100%; border-collapse: collapse; }
+  
+  table { width: 100%; border-collapse: collapse; display: table; }
   th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
   th { background: #f8f8f8; }
+  
   .hint { font-size: 13px; color: #888; margin-top: 6px; }
   .type-box { display: flex; gap: 8px; margin-top: 16px; }
   .type-box input { flex: 1; padding: 14px 16px; font-size: 22px; border: 2px solid #ddd; border-radius: 8px; text-align: center; }
@@ -60,103 +70,196 @@
   .type-box input.correct { border-color: #2ecc71; background: #eafaf1; }
   .type-box input.wrong { border-color: #e74c3c; background: #fdedec; }
   .type-box button { padding: 14px 24px; font-size: 16px; }
-  .answer-reveal { margin-top: 12px; font-size: 18px; color: #c0392b; text-align: center; min-height: 24px; }
+  .answer-reveal { margin-top: 12px; font-size: 18px; color: #c0392b; text-align: center; min-height: 24px; font-weight: bold; }
   .file-label { display: inline-block; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 15px; color: white; }
   
-  .lesson-filter { text-align: center; margin-bottom: 16px; background: #e8f4f8; padding: 12px; border-radius: 8px; border: 1px dashed #3498db; }
+  .lesson-filter { text-align: center; margin-bottom: 16px; background: #e8f4f8; padding: 12px; border-radius: 8px; border: 1px dashed #3498db; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px;}
   .lesson-filter select { padding: 8px 16px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; outline: none; cursor: pointer; max-width: 100%; }
   
-  .audio-settings { display: flex; justify-content: center; align-items: center; gap: 10px; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; border: 1px solid #ddd; }
-  .audio-settings input[type=range] { width: 150px; cursor: pointer; }
+  .audio-settings { display: flex; justify-content: center; align-items: center; gap: 10px; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; border: 1px solid #ddd; flex-wrap: wrap;}
+  .audio-settings input[type=range] { width: 100px; cursor: pointer; }
+  .audio-settings input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
   .speed-label { font-weight: bold; color: #e67e22; min-width: 40px; text-align: center; }
   
   .btn-speak { background: #f1c40f; color: #333; border-radius: 50%; width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; border: none; box-shadow: 0 2px 4px rgba(0,0,0,.2); transition: transform 0.1s; flex-shrink: 0; margin: 0; }
   .btn-speak:hover { background: #f39c12; transform: scale(1.1); }
-  .btn-speak-table { width: 32px; height: 32px; font-size: 14px; box-shadow: none; background: #ecf0f1; border: 1px solid #ccc; margin: 0; }
-  .btn-speak-table:hover { background: #d5dbdb; }
+
+  .flashcard-container { perspective: 1000px; width: 100%; max-width: 400px; height: 250px; margin: 20px auto; cursor: pointer; }
+  .flashcard { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; }
+  .flashcard-container.flipped .flashcard { transform: rotateY(180deg); }
+  .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 16px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+  .flashcard-front { background: linear-gradient(135deg, #ffffff, #f0f0f0); border: 2px solid #ddd; }
+  .flashcard-back { background: linear-gradient(135deg, #fdfbfb, #ebedee); border: 2px solid #c0392b; transform: rotateY(180deg); }
+  .fc-hanzi { font-size: 64px; font-weight: bold; color: #333; margin-bottom: 10px; }
+  .fc-hanviet { font-size: 20px; color: #e67e22; font-style: italic; }
+  .fc-pinyin { font-size: 28px; color: #c0392b; font-weight: bold; margin-bottom: 10px; }
+  .fc-meaning { font-size: 22px; color: #333; }
+  .fc-hint { font-size: 13px; color: #888; position: absolute; bottom: 15px; width: 100%; text-align: center; }
+  .flashcard-controls { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+
+  #writer-container { display: flex; flex-direction: column; align-items: center; margin-top: 20px; }
+  #writer-target { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 100%; margin-bottom: 15px; }
+  .wbox { background: #fafafa; border: 2px dashed #ccc; border-radius: 12px; touch-action: none; line-height: 0; }
+  .wbox svg { touch-action: none; display: block; }
+  .wbox.done { border-style: solid; border-color: #27ae60; background: #f3fbf6; }
+  .writer-controls { display: flex; gap: 10px; justify-content: center; }
+
+  .write-bar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: center; margin: 10px 0; }
+  .seg { display: inline-flex; border-radius: 8px; overflow: hidden; border: 1px solid #ccc; }
+  .seg button { margin: 0; border-radius: 0; background: #ecf0f1; color: #333; padding: 8px 14px; font-size: 14px; }
+  .seg button.active { background: #c0392b; color: white; }
+  .write-info { text-align: center; margin-top: 6px; }
+  .write-progress { font-size: 13px; color: #888; }
+  .write-hanzi { font-size: 40px; font-weight: bold; color: #333; line-height: 1.2; min-height: 48px; }
+  .write-pinyin { font-size: 20px; color: #e67e22; }
+  .write-meaning { font-size: 17px; color: #555; margin-top: 2px; }
+  .write-feedback { margin-top: 12px; font-weight: bold; color: #2c3e50; min-height: 24px; text-align: center; }
+  .writer-controls { flex-wrap: wrap; }
+
+  .search-row { display: flex; gap: 8px; margin: 10px 0; }
+  .search-row input { flex: 1; padding: 10px 14px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; }
+  .search-row input:focus { outline: none; border-color: #c0392b; }
+  .search-row button { margin: 0; }
+  .sr-list { max-height: 240px; overflow-y: auto; border-radius: 8px; }
+  .sr-item { display: flex; gap: 10px; align-items: baseline; width: 100%; text-align: left; margin: 0; padding: 8px 12px; border-radius: 0; background: #fff; border-bottom: 1px solid #eee; font-size: 14px; color: #333; }
+  .sr-item:hover { background: #fdf2f0; }
+  .sr-item .h { font-size: 22px; font-weight: bold; min-width: 70px; }
+  .sr-item .p { color: #e67e22; min-width: 90px; }
+  .sr-item .m { color: #555; flex: 1; }
+  .sr-item .lv { font-size: 11px; color: #999; }
+  .sr-empty { text-align: center; color: #888; font-size: 14px; padding: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .chip { margin: 0; padding: 5px 12px; font-size: 14px; border-radius: 16px; background: #ecf0f1; color: #333; border: 1px solid #ccc; }
+  .chip:hover { background: #fdf2f0; border-color: #c0392b; }
+  .ol-form { display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center; margin-top: 10px; }
+  .ol-form input { padding: 8px 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; width: 100%; }
+  .ol-form input:focus { outline: none; border-color: #c0392b; }
+  .ol-form label { font-size: 14px; color: #666; font-weight: bold; }
+  .ol-msg { font-size: 14px; margin-top: 8px; min-height: 20px; }
+
+  #gate { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #c0392b, #7b241c); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  #gate.hidden { display: none !important; }
+  #gate .box { background: white; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 380px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  #gate h2 { margin: 0 0 6px 0; color: #c0392b; font-size: 22px; }
+  #gate p { margin: 0 0 16px 0; color: #666; font-size: 14px; }
+  #gate input { width: 100%; padding: 14px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; text-align: center; }
+  #gate input:focus { outline: none; border-color: #c0392b; }
+  #gate button { width: 100%; margin: 12px 0 0 0; padding: 14px; font-size: 16px; }
+  #gate .err { color: #e74c3c; font-size: 14px; min-height: 20px; margin-top: 10px; }
 
   @media (max-width: 600px) {
     .options { grid-template-columns: 1fr; }
-    .question .prompt { font-size: 32px; }
+    .question .prompt { font-size: 32px; flex-direction: column; gap: 6px; }
     .type-box { flex-direction: column; }
-    .question .prompt { flex-direction: column; gap: 6px; }
-    .audio-settings { flex-wrap: wrap; }
   }
 </style>
 </head>
 <body>
 
-<h1>📚 Sổ tay Từ vựng Tiếng Trung</h1>
-<div class="subtitle">Học mọi lúc, mọi nơi - Tự do tùy biến bộ từ của bạn</div>
+<!-- ========== CỔNG NHẬP TÊN LỚP ========== -->
+<div id="gate">
+  <div class="box">
+    <h2>📚 Sổ tay Từ vựng HSK 2</h2>
+    <p>Vui lòng nhập <b>tên lớp</b> để vào học</p>
+    <input type="text" id="gateInput" placeholder="Nhập tên lớp..." autocomplete="off" onkeydown="if(event.key==='Enter') gateCheck()">
+    <button class="btn-primary" onclick="gateCheck()">Vào học</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+<script>
+const CLASS_NAMES = [
+  'lehoaik20'
+];
+
+function gateNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]/g, '');
+}
+const GATE_OK = CLASS_NAMES.map(gateNorm);
+function gateUnlock() { document.getElementById('gate').classList.add('hidden'); }
+function gateCheck() {
+  const v = gateNorm(document.getElementById('gateInput').value);
+  if (v && GATE_OK.includes(v)) {
+    try { localStorage.setItem('zh_gate_v13_2', v); } catch (e) {}
+    gateUnlock();
+  } else {
+    document.getElementById('gateErr').textContent = '❌ Tên lớp không đúng, vui lòng thử lại.';
+    document.getElementById('gateInput').select();
+  }
+}
+(function () {
+  try {
+    const saved = localStorage.getItem('zh_gate_v13_2');
+    if (saved && GATE_OK.includes(saved)) { gateUnlock(); return; }
+  } catch (e) {}
+  setTimeout(() => { const i = document.getElementById('gateInput'); if (i) i.focus(); }, 100);
+})();
+</script>
+
+
+<h1>📚 Sổ tay Từ vựng HSK 2</h1>
+<div class="subtitle">Học mọi lúc, mọi nơi - Chia theo 15 bài</div>
 
 <!-- ========== TAB NHẬP ========== -->
 <div id="tab-input">
   <div class="card">
+    <h3>🌐 Tìm từ online &amp; thêm vào thư viện</h3>
+    <p class="hint">Gõ <b>Hán tự</b> (VD: 图书馆) hoặc <b>nghĩa tiếng Việt/Anh</b> (VD: thư viện, library). Kết quả có thể sửa trước khi thêm.</p>
+    <div class="search-row">
+      <input type="text" id="onlineQuery" placeholder="Gõ từ cần tìm..." onkeydown="if(event.key==='Enter') onlineSearch()">
+      <button class="btn-primary" onclick="onlineSearch()">🔍 Tìm</button>
+    </div>
+    <div id="onlineChips" class="chips"></div>
+    <div id="onlineResult"></div>
+    <div id="onlineMsg" class="ol-msg"></div>
+  </div>
+
+  <div class="card">
     <h3>Nhập list từ bằng text</h3>
-    <p class="hint">Mỗi dòng: <b>Hán tự | Pinyin | Nghĩa</b> (cách nhau dấu <b>|</b>, <b>Tab</b> hoặc <b>,</b>)</p>
+    <p class="hint">Mỗi dòng: <b>Hán tự | Pinyin | Nghĩa</b></p>
     <textarea id="inputArea" placeholder="苹果 | píngguǒ | Quả táo"></textarea>
-    <div style="margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+    <div style="margin-top: 12px;">
       <button class="btn-primary" onclick="loadWords(false)">📥 Thay thế toàn bộ list</button>
       <button class="btn-append" onclick="loadWords(true)">➕ Thêm vào list hiện tại</button>
     </div>
   </div>
 
   <div class="card">
-    <h3>Nhập từ file Excel</h3>
-    <p class="hint">File cần 3 cột: <b>Hán tự | Pinyin | Nghĩa</b>. Hỗ trợ .xlsx, .xls, .csv</p>
-    <div style="margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+    <h3>Nhập từ file Excel / CSV</h3>
+    <div style="margin-top: 12px;">
       <label class="file-label btn-primary">
-        📂 Nhập Excel (thay thế list)
+        📂 Nhập File (thay thế list)
         <input type="file" id="excelReplace" accept=".xlsx,.xls,.csv" style="display:none;" onchange="loadExcel(event, false)">
       </label>
       <label class="file-label btn-append">
-        📂➕ Nhập Excel (thêm từ mới)
+        📂➕ Nhập File (thêm từ mới)
         <input type="file" id="excelAppend" accept=".xlsx,.xls,.csv" style="display:none;" onchange="loadExcel(event, true)">
       </label>
     </div>
   </div>
-
+  
   <div class="card">
-    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
-      <button class="btn-ghost" onclick="clearWords()">🗑 Xóa sạch list</button>
-      <button class="btn-ghost" onclick="restoreDefaults()">↩️ Khôi phục list mặc định</button>
-      <span id="countInfo" style="color: #666;"></span>
-    </div>
+    <button class="btn-ghost" onclick="restoreDefaults()">↩️ Khôi phục list mặc định</button>
   </div>
 </div>
 
-<!-- ========== TAB HỌC ========== -->
+<!-- ========== TAB HỌC (TRẮC NGHIỆM) ========== -->
 <div id="tab-quiz" class="hidden">
   <div class="card">
-  
     <div class="audio-settings">
       <span>🔈 Tốc độ đọc:</span>
       <input type="range" id="speedRange" min="0.5" max="1.2" step="0.1" value="0.85" oninput="updateSpeedLabel()" onchange="saveSpeed()">
       <span class="speed-label" id="speedLabel">0.85x</span>
+      
+      <span style="margin-left: 15px; border-left: 1px solid #ccc; padding-left: 15px;">⏱️ Tính giờ:</span>
+      <input type="checkbox" id="timerToggle" onchange="toggleTimer()">
     </div>
 
     <div class="lesson-filter">
-      <label for="lessonSelect" style="font-weight: bold; margin-right: 8px; color: #2980b9;">📖 Chọn Bộ Từ:</label>
+      <label for="lessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Bài:</label>
       <select id="lessonSelect" onchange="changeLesson()">
-        <option value="all">Tất cả các từ</option>
-        <option value="1">Bài 1</option>
-        <option value="2">Bài 2</option>
-        <option value="3">Bài 3</option>
-        <option value="4">Bài 4</option>
-        <option value="5">Bài 5</option>
-        <option value="6">Bài 6</option>
-        <option value="7">Bài 7</option>
-        <option value="8">Bài 8</option>
-        <option value="9">Bài 9</option>
-        <option value="10">Bài 10</option>
-        <option value="11">Bài 11</option>
-        <option value="12">Bài 12</option>
-        <option value="13">Bài 13</option>
-        <option value="14">Bài 14</option>
-        <option value="15">Bài 15</option>
-        <option value="0">Từ tự nhập (Không bài)</option>
+        <!-- Được sinh ra tự động bằng JS -->
       </select>
-      <span id="lessonCount" style="margin-left: 10px; font-size: 14px; color: #666;"></span>
+      <span id="lessonCount" style="font-size: 14px; color: #666;"></span>
     </div>
 
     <div class="tabs">
@@ -165,10 +268,12 @@
       <button data-mode="meaning" onclick="setMode('meaning')">Điền Nghĩa</button>
       <button data-mode="wrong" onclick="setMode('wrong')" style="background:#f39c12; color:white;">🔥 Ôn từ sai</button>
     </div>
+    
     <div style="text-align: center; margin-bottom: 12px;">
       <button id="typeHanziBtn" class="btn-toggle" onclick="toggleType('hanzi')">⌨️ Gõ Hán tự (hiện Nghĩa)</button>
       <button id="typePinyinBtn" class="btn-toggle" onclick="toggleType('pinyin')">⌨️ Gõ Pinyin (hiện Hán tự + Nghĩa)</button>
     </div>
+    
     <div class="stats">
       <span>✅ Đúng: <b id="correctCount">0</b></span>
       <span>❌ Sai: <b id="wrongCount">0</b></span>
@@ -184,9 +289,13 @@
       <div class="sub" id="subText"></div>
     </div>
     
+    <div class="timer-container" id="timerContainer">
+      <div class="timer-bar" id="timerBar"></div>
+    </div>
+    
     <div class="options" id="optionsBox"></div>
     <div class="type-box hidden" id="typeBox">
-      <input type="text" id="typeInput" placeholder="Gõ đáp án rồi nhấn Enter..." onkeydown="if(event.key==='Enter') checkTyped()">
+      <input type="text" id="typeInput" placeholder="Gõ đáp án..." onkeydown="if(event.key==='Enter') checkTyped()">
       <button class="btn-primary" onclick="checkTyped()">Kiểm tra</button>
     </div>
     <div class="answer-reveal" id="answerReveal"></div>
@@ -198,342 +307,431 @@
   </div>
 </div>
 
+<!-- ========== TAB FLASHCARD ========== -->
+<div id="tab-flashcard" class="hidden">
+  <div class="card">
+    <div class="lesson-filter">
+      <label for="fcLessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Bài:</label>
+      <select id="fcLessonSelect" onchange="changeFcLesson()">
+        <!-- Được sinh ra tự động bằng JS -->
+      </select>
+      <label style="margin-left: 10px; font-size: 14px;"><input type="checkbox" id="fcAutoSpeak" checked onchange="saveFcSettings()"> Tự động đọc</label>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 10px;">
+      <span id="fcProgress" style="color: #666; font-weight: bold;">Thẻ 1 / 10</span>
+    </div>
+
+    <div class="flashcard-container" id="flashcardContainer" onclick="flipCard()">
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard-front">
+          <div class="fc-hanzi" id="fcFrontHanzi">你好</div>
+          <div class="fc-hanviet" id="fcFrontHanviet">Nhĩ hảo</div>
+          <div class="fc-hint">Bấm để xem đáp án</div>
+        </div>
+        <div class="flashcard-back">
+          <div class="fc-pinyin" id="fcBackPinyin">nǐ hǎo</div>
+          <div class="fc-meaning" id="fcBackMeaning">Xin chào</div>
+          <div class="fc-hint">Bấm để lật lại</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flashcard-controls">
+      <button class="btn-secondary" onclick="prevCard()">⬅ Trước</button>
+      <button class="btn-primary" onclick="speakCurrentCard()">🔊 Đọc</button>
+      <button class="btn-secondary" onclick="nextCard()">Sau ➡</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TAB LUYỆN VIẾT ========== -->
+<div id="tab-write" class="hidden">
+  <div class="card">
+    <div class="lesson-filter">
+      <label for="writeLevel" style="font-weight: bold; color: #2980b9;">📖 Nguồn từ:</label>
+      <select id="writeLevel" onchange="changeWriteLevel()"></select>
+    </div>
+
+    <div class="search-row">
+      <input type="text" id="writeSearch" placeholder="🔍 Tìm từ trong thư viện (Hán tự, pinyin, Hán Việt, nghĩa)..." oninput="writeSearchInput()">
+      <button class="btn-ghost" onclick="clearWriteSearch()">✖</button>
+    </div>
+    <div id="writeSearchRes" class="sr-list"></div>
+
+    <div class="write-bar">
+      <div class="seg">
+        <button id="wmMemory" onclick="setWriteMode('memory')">🧠 Viết theo trí nhớ</button>
+        <button id="wmTrace" onclick="setWriteMode('trace')">✍️ Tô theo nét mờ</button>
+      </div>
+    </div>
+    <div class="write-bar" style="font-size: 14px;">
+      <label><input type="checkbox" id="writeRandom" onchange="toggleWriteRandom()"> 🔀 Ngẫu nhiên</label>
+    </div>
+
+    <div class="write-info">
+      <div id="writeProgress" class="write-progress">0 / 0</div>
+      <div id="writeHanzi" class="write-hanzi"></div>
+      <div id="writePinyin" class="write-pinyin"></div>
+      <div id="writeMeaning" class="write-meaning"></div>
+    </div>
+
+    <div id="writer-container">
+      <div id="writer-target"></div>
+      <p id="writerFeedback" class="write-feedback"></p>
+      <div class="writer-controls">
+        <button class="btn-ghost" onclick="writePrev()">← Trước</button>
+        <button class="btn-secondary" onclick="playAnimation()">▶ Xem nét mẫu</button>
+        <button class="btn-primary" onclick="restartWrite()">↻ Viết lại</button>
+        <button class="btn-next" id="writeNextBtn" onclick="writeNext()">Tiếp →</button>
+      </div>
+      <div class="writer-controls">
+        <button class="btn-ghost" onclick="speakWriteWord()">🔊 Nghe</button>
+        <button class="btn-append hidden" id="writeLearnedBtn" onclick="markWriteLearned()">✔ Đã thuộc — bỏ khỏi Từ sai</button>
+      </div>
+      <p id="writeStats" style="font-size: 13px; color: #888; margin-top: 8px;"></p>
+    </div>
+  </div>
+</div>
+
 <!-- ========== TAB XEM LIST ========== -->
 <div id="tab-list" class="hidden">
   <div class="card">
     <h3>Danh sách từ (<span id="listCount">0</span> từ)</h3>
     <div style="max-height: 400px; overflow-y: auto;">
       <table>
-        <thead><tr><th>Bài</th><th>Hán tự</th><th>Pinyin</th><th>Nghĩa</th><th>Nghe</th></tr></thead>
+        <thead><tr><th>Bài</th><th>Hán tự</th><th>Pinyin</th><th>Hán Việt</th><th>Nghĩa</th><th>Nghe</th></tr></thead>
         <tbody id="wordTable"></tbody>
       </table>
     </div>
   </div>
 </div>
 
-<div style="text-align: center; margin-top: 20px;">
+<div style="text-align: center; margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;">
   <button class="btn-secondary" onclick="showTab('input')">📝 Nhập từ</button>
-  <button class="btn-secondary" onclick="showTab('quiz')">🎯 Học</button>
+  <button class="btn-secondary" onclick="showTab('quiz')">🎯 Trắc nghiệm</button>
+  <button class="btn-secondary" onclick="showTab('flashcard')">🃏 Flashcard</button>
+  <button class="btn-secondary" onclick="showTab('write')">✍️ Luyện viết</button>
   <button class="btn-secondary" onclick="showTab('list')">📋 Xem list</button>
 </div>
 
 <script>
 // ============================================================
-// LIST TỪ MẶC ĐỊNH HSK 2 (Cập nhật từ file Excel mới nhất)
+// MẢNG TỪ VỰNG HSK 2 (PHÂN CHIA THEO 15 BÀI)
 // ============================================================
 const defaultWords = [
   // Bài 1
-  { lesson: 1, hanzi: '旅游', pinyin: 'lǚyóu', meaning: 'Du lịch' },
-  { lesson: 1, hanzi: '觉得', pinyin: 'juéde', meaning: 'Cảm thấy, cho rằng, nghĩ rằng' },
-  { lesson: 1, hanzi: '最', pinyin: 'zuì', meaning: 'Nhất (chỉ mức độ cao nhất)' },
-  { lesson: 1, hanzi: '为什么', pinyin: 'wèi shénme', meaning: 'Tại sao' },
-  { lesson: 1, hanzi: '也', pinyin: 'yě', meaning: 'Cũng' },
-  { lesson: 1, hanzi: '运动', pinyin: 'yùndòng', meaning: 'Môn thể thao / Tập thể dục' },
-  { lesson: 1, hanzi: '踢足球', pinyin: 'tī zúqiú', meaning: 'Đá bóng' },
-  { lesson: 1, hanzi: '一起', pinyin: 'yìqǐ', meaning: 'Cùng nhau' },
-  { lesson: 1, hanzi: '要', pinyin: 'yào', meaning: 'Muốn, cần, sẽ' },
-  { lesson: 1, hanzi: '新', pinyin: 'xīn', meaning: 'Mới' },
-  { lesson: 1, hanzi: '它', pinyin: 'tā', meaning: 'Nó (chỉ động vật, đồ vật)' },
-  { lesson: 1, hanzi: '眼睛', pinyin: 'yǎnjing', meaning: 'Đôi mắt' },
-  { lesson: 1, hanzi: '足球', pinyin: 'zúqiú', meaning: 'Quả bóng đá' },
-  { lesson: 1, hanzi: '椅子', pinyin: 'yǐzi', meaning: 'Cái ghế' },
-  { lesson: 1, hanzi: '猫', pinyin: 'māo', meaning: 'Con mèo' },
-  { lesson: 1, hanzi: '北京', pinyin: 'Běijīng', meaning: 'Bắc Kinh' },
-  { lesson: 1, hanzi: '天气', pinyin: 'tiānqì', meaning: 'Thời tiết' },
-  { lesson: 1, hanzi: '冷', pinyin: 'lěng', meaning: 'Lạnh' },
-  { lesson: 1, hanzi: '热', pinyin: 'rè', meaning: 'Nóng' },
-  { lesson: 1, hanzi: '九月', pinyin: 'jiǔ yuè', meaning: 'Tháng 9' },
-  
+  { level: "Bài 1", hanzi: "旅游", pinyin: "lǚyóu", hanviet: "Lữ du", meaning: "Du lịch" },
+  { level: "Bài 1", hanzi: "觉得", pinyin: "juéde", hanviet: "Giác đắc", meaning: "Cảm thấy, cho rằng" },
+  { level: "Bài 1", hanzi: "最", pinyin: "zuì", hanviet: "Tối", meaning: "Nhất" },
+  { level: "Bài 1", hanzi: "为什么", pinyin: "wèi shénme", hanviet: "Vi thập ma", meaning: "Tại sao" },
+  { level: "Bài 1", hanzi: "也", pinyin: "yě", hanviet: "Dã", meaning: "Cũng" },
+  { level: "Bài 1", hanzi: "运动", pinyin: "yùndòng", hanviet: "Vận động", meaning: "Thể thao, vận động" },
+  { level: "Bài 1", hanzi: "踢足球", pinyin: "tī zúqiú", hanviet: "Thích túc cầu", meaning: "Đá bóng" },
+  { level: "Bài 1", hanzi: "一起", pinyin: "yìqǐ", hanviet: "Nhất khởi", meaning: "Cùng nhau" },
+  { level: "Bài 1", hanzi: "要", pinyin: "yào", hanviet: "Yếu", meaning: "Muốn, cần" },
+  { level: "Bài 1", hanzi: "新", pinyin: "xīn", hanviet: "Tân", meaning: "Mới" },
+  { level: "Bài 1", hanzi: "它", pinyin: "tā", hanviet: "Tha", meaning: "Nó" },
+  { level: "Bài 1", hanzi: "眼睛", pinyin: "yǎnjing", hanviet: "Nhãn tình", meaning: "Mắt" },
+  { level: "Bài 1", hanzi: "足球", pinyin: "zúqiú", hanviet: "Túc cầu", meaning: "Bóng đá" },
+  { level: "Bài 1", hanzi: "椅子", pinyin: "yǐzi", hanviet: "Ỷ tử", meaning: "Cái ghế" },
+  { level: "Bài 1", hanzi: "猫", pinyin: "māo", hanviet: "Miêu", meaning: "Con mèo" },
+  { level: "Bài 1", hanzi: "北京", pinyin: "Běijīng", hanviet: "Bắc Kinh", meaning: "Bắc Kinh" },
+  { level: "Bài 1", hanzi: "天气", pinyin: "tiānqì", hanviet: "Thiên khí", meaning: "Thời tiết" },
+  { level: "Bài 1", hanzi: "冷", pinyin: "lěng", hanviet: "Lãnh", meaning: "Lạnh" },
+  { level: "Bài 1", hanzi: "热", pinyin: "rè", hanviet: "Nhiệt", meaning: "Nóng" },
+  { level: "Bài 1", hanzi: "九月", pinyin: "jiǔ yuè", hanviet: "Cửu nguyệt", meaning: "Tháng 9" },
+
   // Bài 2
-  { lesson: 2, hanzi: '起床', pinyin: 'qǐ chuáng', meaning: 'Thức dậy' },
-  { lesson: 2, hanzi: '跑步', pinyin: 'pǎo bù', meaning: 'Chạy bộ' },
-  { lesson: 2, hanzi: '身体', pinyin: 'shēntǐ', meaning: 'Sức khỏe, cơ thể' },
-  { lesson: 2, hanzi: '生病', pinyin: 'shēng bìng', meaning: 'Bị bệnh, bị ốm' },
-  { lesson: 2, hanzi: '药', pinyin: 'yào', meaning: 'Thuốc' },
-  { lesson: 2, hanzi: '出院', pinyin: 'chū yuàn', meaning: 'Xuất viện' },
-  { lesson: 2, hanzi: '出', pinyin: 'chū', meaning: 'Ra, ra ngoài' },
-  { lesson: 2, hanzi: '高', pinyin: 'gāo', meaning: 'Cao' },
-  { lesson: 2, hanzi: '米', pinyin: 'mǐ', meaning: 'Mét (đơn vị đo chiều cao/khoảng cách)' },
-  { lesson: 2, hanzi: '知道', pinyin: 'zhīdào', meaning: 'Biết' },
-  { lesson: 2, hanzi: '休息', pinyin: 'xiūxi', meaning: 'Nghỉ ngơi' },
-  { lesson: 2, hanzi: '忙', pinyin: 'máng', meaning: 'Bận' },
-  { lesson: 2, hanzi: '时间', pinyin: 'shíjiān', meaning: 'Thời gian' },
-  { lesson: 2, hanzi: '每', pinyin: 'měi', meaning: 'Mỗi' },
-  { lesson: 2, hanzi: '早上', pinyin: 'zǎoshang', meaning: 'Buổi sáng' },
-  { lesson: 2, hanzi: '住院', pinyin: 'zhùyuàn', meaning: 'Nhập viện' },
-  { lesson: 2, hanzi: '医生', pinyin: 'yīshēng', meaning: 'Bác sĩ' },
-  { lesson: 2, hanzi: '医院', pinyin: 'yīyuàn', meaning: 'Bệnh viện' },
-  { lesson: 2, hanzi: '吃药', pinyin: 'chī yào', meaning: 'Uống thuốc' },
-  { lesson: 2, hanzi: '身体好了', pinyin: 'shēntǐ hǎo le', meaning: 'Sức khỏe hồi phục / Đã khỏi bệnh' },
-  { lesson: 2, hanzi: '胖', pinyin: 'pàng', meaning: 'Béo' },
-  { lesson: 2, hanzi: '瘦', pinyin: 'shòu', meaning: 'Gầy' },
-  { lesson: 2, hanzi: '多高', pinyin: 'duō gāo', meaning: 'Cao bao nhiêu' },
-  { lesson: 2, hanzi: '睡觉', pinyin: 'shuì jiào', meaning: 'Đi ngủ' },
+  { level: "Bài 2", hanzi: "起床", pinyin: "qǐ chuáng", hanviet: "Khởi sàng", meaning: "Thức dậy" },
+  { level: "Bài 2", hanzi: "跑步", pinyin: "pǎo bù", hanviet: "Bào bộ", meaning: "Chạy bộ" },
+  { level: "Bài 2", hanzi: "身体", pinyin: "shēntǐ", hanviet: "Thân thể", meaning: "Cơ thể, sức khỏe" },
+  { level: "Bài 2", hanzi: "生病", pinyin: "shēng bìng", hanviet: "Sinh bệnh", meaning: "Bị bệnh" },
+  { level: "Bài 2", hanzi: "药", pinyin: "yào", hanviet: "Dược", meaning: "Thuốc" },
+  { level: "Bài 2", hanzi: "出院", pinyin: "chū yuàn", hanviet: "Xuất viện", meaning: "Xuất viện" },
+  { level: "Bài 2", hanzi: "出", pinyin: "chū", hanviet: "Xuất", meaning: "Ra ngoài" },
+  { level: "Bài 2", hanzi: "高", pinyin: "gāo", hanviet: "Cao", meaning: "Cao" },
+  { level: "Bài 2", hanzi: "米", pinyin: "mǐ", hanviet: "Mễ", meaning: "Mét" },
+  { level: "Bài 2", hanzi: "知道", pinyin: "zhīdào", hanviet: "Tri đạo", meaning: "Biết" },
+  { level: "Bài 2", hanzi: "休息", pinyin: "xiūxi", hanviet: "Hưu tức", meaning: "Nghỉ ngơi" },
+  { level: "Bài 2", hanzi: "忙", pinyin: "máng", hanviet: "Mang", meaning: "Bận" },
+  { level: "Bài 2", hanzi: "时间", pinyin: "shíjiān", hanviet: "Thời gian", meaning: "Thời gian" },
+  { level: "Bài 2", hanzi: "每", pinyin: "měi", hanviet: "Mỗi", meaning: "Mỗi" },
+  { level: "Bài 2", hanzi: "早上", pinyin: "zǎoshang", hanviet: "Tảo thượng", meaning: "Buổi sáng" },
+  { level: "Bài 2", hanzi: "住院", pinyin: "zhùyuàn", hanviet: "Trú viện", meaning: "Nhập viện" },
+  { level: "Bài 2", hanzi: "医生", pinyin: "yīshēng", hanviet: "Y sinh", meaning: "Bác sĩ" },
+  { level: "Bài 2", hanzi: "医院", pinyin: "yīyuàn", hanviet: "Y viện", meaning: "Bệnh viện" },
+  { level: "Bài 2", hanzi: "吃药", pinyin: "chī yào", hanviet: "Cật dược", meaning: "Uống thuốc" },
+  { level: "Bài 2", hanzi: "身体好了", pinyin: "shēntǐ hǎo le", hanviet: "Thân thể hảo liễu", meaning: "Đã khỏi bệnh" },
+  { level: "Bài 2", hanzi: "胖", pinyin: "pàng", hanviet: "Béo", meaning: "Béo" },
+  { level: "Bài 2", hanzi: "瘦", pinyin: "shòu", hanviet: "Sấu", meaning: "Gầy" },
+  { level: "Bài 2", hanzi: "多高", pinyin: "duō gāo", hanviet: "Đa cao", meaning: "Cao bao nhiêu" },
+  { level: "Bài 2", hanzi: "睡觉", pinyin: "shuì jiào", hanviet: "Thụy giác", meaning: "Đi ngủ" },
 
   // Bài 3
-  { lesson: 3, hanzi: '手表', pinyin: 'shǒubiǎo', meaning: 'Đồng hồ đeo tay' },
-  { lesson: 3, hanzi: '千', pinyin: 'qiān', meaning: 'Nghìn, ngàn' },
-  { lesson: 3, hanzi: '报纸', pinyin: 'bàozhǐ', meaning: 'Tờ báo' },
-  { lesson: 3, hanzi: '送', pinyin: 'sòng', meaning: 'Giao, đưa, tặng' },
-  { lesson: 3, hanzi: '一下', pinyin: 'yíxià', meaning: 'Một chút, thử (đặt sau động từ)' },
-  { lesson: 3, hanzi: '牛奶', pinyin: 'niúnǎi', meaning: 'Sữa bò' },
-  { lesson: 3, hanzi: '房间', pinyin: 'fángjiān', meaning: 'Phòng, căn phòng' },
-  { lesson: 3, hanzi: '丈夫', pinyin: 'zhàngfu', meaning: 'Chồng' },
-  { lesson: 3, hanzi: '旁边', pinyin: 'pángbiān', meaning: 'Bên cạnh' },
-  { lesson: 3, hanzi: '真', pinyin: 'zhēn', meaning: 'Thật, quá (cảm thán)' },
-  { lesson: 3, hanzi: '粉色', pinyin: 'fěnsè', meaning: 'Màu hồng' },
-  { lesson: 3, hanzi: '颜色', pinyin: 'yánsè', meaning: 'Màu sắc' },
-  { lesson: 3, hanzi: '左边', pinyin: 'zuǒbian', meaning: 'Bên trái' },
-  { lesson: 3, hanzi: '红色', pinyin: 'hóngsè', meaning: 'Màu đỏ' },
-  { lesson: 3, hanzi: '右边', pinyin: 'yòubian', meaning: 'Bên phải' },
-  { lesson: 3, hanzi: '前边', pinyin: 'qiánbian', meaning: 'Bên trước / Phía trước' },
-  { lesson: 3, hanzi: '后边', pinyin: 'hòubian', meaning: 'Bên sau / Phía sau' },
-  { lesson: 3, hanzi: '黑色', pinyin: 'hēisè', meaning: 'Màu đen' },
-  { lesson: 3, hanzi: '白色', pinyin: 'báisè', meaning: 'Màu trắng' },
-  { lesson: 3, hanzi: '妻子', pinyin: 'qīzi', meaning: 'Vợ' },
-  { lesson: 3, hanzi: '拿', pinyin: 'ná', meaning: 'Cầm, lấy' },
-  { lesson: 3, hanzi: '杯子', pinyin: 'bēizi', meaning: 'Cái cốc, cái ly' },
-  { lesson: 3, hanzi: '笔', pinyin: 'bǐ', meaning: 'Cây bút' },
-  { lesson: 3, hanzi: '书', pinyin: 'shū', meaning: 'Quyển sách' },
-  { lesson: 3, hanzi: '钱', pinyin: 'qián', meaning: 'Tiền' },
-  { lesson: 3, hanzi: '块', pinyin: 'kuài', meaning: 'Đồng (đơn vị tiền tệ tệ)' },
-  { lesson: 3, hanzi: '奶茶', pinyin: 'nǎichá', meaning: 'Trà sữa' },
-  { lesson: 3, hanzi: '哪边', pinyin: 'nǎbiān', meaning: 'Bên nào' },
-  { lesson: 3, hanzi: '那边', pinyin: 'nàbiān', meaning: 'Bên đó' },
-  { lesson: 3, hanzi: '这边', pinyin: 'zhèbiān', meaning: 'Bên này' },
+  { level: "Bài 3", hanzi: "手表", pinyin: "shǒubiǎo", hanviet: "Thủ biểu", meaning: "Đồng hồ đeo tay" },
+  { level: "Bài 3", hanzi: "千", pinyin: "qiān", hanviet: "Thiên", meaning: "Nghìn" },
+  { level: "Bài 3", hanzi: "报纸", pinyin: "bàozhǐ", hanviet: "Báo chỉ", meaning: "Tờ báo" },
+  { level: "Bài 3", hanzi: "送", pinyin: "sòng", hanviet: "Tống", meaning: "Tặng, giao" },
+  { level: "Bài 3", hanzi: "一下", pinyin: "yíxià", hanviet: "Nhất hạ", meaning: "Một chút" },
+  { level: "Bài 3", hanzi: "牛奶", pinyin: "niúnǎi", hanviet: "Ngưu nãi", meaning: "Sữa bò" },
+  { level: "Bài 3", hanzi: "房间", pinyin: "fángjiān", hanviet: "Phòng gian", meaning: "Phòng" },
+  { level: "Bài 3", hanzi: "丈夫", pinyin: "zhàngfu", hanviet: "Trượng phu", meaning: "Chồng" },
+  { level: "Bài 3", hanzi: "旁边", pinyin: "pángbiān", hanviet: "Bàng biên", meaning: "Bên cạnh" },
+  { level: "Bài 3", hanzi: "真", pinyin: "zhēn", hanviet: "Chân", meaning: "Thật" },
+  { level: "Bài 3", hanzi: "粉色", pinyin: "fěnsè", hanviet: "Phấn sắc", meaning: "Màu hồng" },
+  { level: "Bài 3", hanzi: "颜色", pinyin: "yánsè", hanviet: "Nhan sắc", meaning: "Màu sắc" },
+  { level: "Bài 3", hanzi: "左边", pinyin: "zuǒbian", hanviet: "Tả biên", meaning: "Bên trái" },
+  { level: "Bài 3", hanzi: "红色", pinyin: "hóngsè", hanviet: "Hồng sắc", meaning: "Màu đỏ" },
+  { level: "Bài 3", hanzi: "右边", pinyin: "yòubian", hanviet: "Hữu biên", meaning: "Bên phải" },
+  { level: "Bài 3", hanzi: "前边", pinyin: "qiánbian", hanviet: "Tiền biên", meaning: "Phía trước" },
+  { level: "Bài 3", hanzi: "后边", pinyin: "hòubian", hanviet: "Hậu biên", meaning: "Phía sau" },
+  { level: "Bài 3", hanzi: "黑色", pinyin: "hēisè", hanviet: "Hắc sắc", meaning: "Màu đen" },
+  { level: "Bài 3", hanzi: "白色", pinyin: "báisè", hanviet: "Bạch sắc", meaning: "Màu trắng" },
+  { level: "Bài 3", hanzi: "妻子", pinyin: "qīzi", hanviet: "Thê tử", meaning: "Vợ" },
+  { level: "Bài 3", hanzi: "拿", pinyin: "ná", hanviet: "Nã", meaning: "Cầm" },
+  { level: "Bài 3", hanzi: "杯子", pinyin: "bēizi", hanviet: "Bôi tử", meaning: "Cái cốc" },
+  { level: "Bài 3", hanzi: "笔", pinyin: "bǐ", hanviet: "Bút", meaning: "Cây bút" },
+  { level: "Bài 3", hanzi: "书", pinyin: "shū", hanviet: "Thư", meaning: "Quyển sách" },
+  { level: "Bài 3", hanzi: "钱", pinyin: "qián", hanviet: "Tiền", meaning: "Tiền" },
+  { level: "Bài 3", hanzi: "块", pinyin: "kuài", hanviet: "Khối", meaning: "Đồng" },
+  { level: "Bài 3", hanzi: "奶茶", pinyin: "nǎichá", hanviet: "Nãi trà", meaning: "Trà sữa" },
+  { level: "Bài 3", hanzi: "哪边", pinyin: "nǎbiān", hanviet: "Nả biên", meaning: "Bên nào" },
+  { level: "Bài 3", hanzi: "那边", pinyin: "nàbiān", hanviet: "Na biên", meaning: "Bên đó" },
+  { level: "Bài 3", hanzi: "这边", pinyin: "zhèbiān", hanviet: "Giá biên", meaning: "Bên này" },
 
   // Bài 4
-  { lesson: 4, hanzi: '生日', pinyin: 'shēngrì', meaning: 'Sinh nhật' },
-  { lesson: 4, hanzi: '快乐', pinyin: 'kuàilè', meaning: 'Vui vẻ, hạnh phúc' },
-  { lesson: 4, hanzi: '给', pinyin: 'gěi', meaning: 'Cho, đưa cho, cho (ai)' },
-  { lesson: 4, hanzi: '接', pinyin: 'jiē', meaning: 'Nhận, nghe (điện thoại), đón' },
-  { lesson: 4, hanzi: '晚上', pinyin: 'wǎnshang', meaning: 'Buổi tối' },
-  { lesson: 4, hanzi: '问', pinyin: 'wèn', meaning: 'Hỏi' },
-  { lesson: 4, hanzi: '非常', pinyin: 'fēicháng', meaning: 'Rất, vô cùng' },
-  { lesson: 4, hanzi: '开始', pinyin: 'kāishǐ', meaning: 'Bắt đầu' },
-  { lesson: 4, hanzi: '已经', pinyin: 'yǐjīng', meaning: 'Đã' },
-  { lesson: 4, hanzi: '长', pinyin: 'cháng', meaning: 'Dài, lâu' },
-  { lesson: 4, hanzi: '两', pinyin: 'liǎng', meaning: 'Hai (dùng trước lượng từ)' },
-  { lesson: 4, hanzi: '帮', pinyin: 'bāng', meaning: 'Giúp, giúp đỡ' },
-  { lesson: 4, hanzi: '介绍', pinyin: 'jièshào', meaning: 'Giới thiệu' },
-  { lesson: 4, hanzi: '电话', pinyin: 'diànhuà', meaning: 'Điện thoại' },
-  { lesson: 4, hanzi: '打电话', pinyin: 'dǎ diànhuà', meaning: 'Gọi điện thoại' },
-  { lesson: 4, hanzi: '看书', pinyin: 'kàn shū', meaning: 'Đọc sách' },
-  { lesson: 4, hanzi: '工作', pinyin: 'gōngzuò', meaning: 'Công việc, làm việc' },
-  { lesson: 4, hanzi: '儿子', pinyin: 'érzi', meaning: 'Con trai' },
-  { lesson: 4, hanzi: '认识', pinyin: 'rènshi', meaning: 'Quen biết' },
-  { lesson: 4, hanzi: '大学同学', pinyin: 'dàxué tóngxué', meaning: 'Bạn học đại học' },
-  { lesson: 4, hanzi: '帮助', pinyin: 'bāngzhù', meaning: 'Giúp đỡ' },
+  { level: "Bài 4", hanzi: "生日", pinyin: "shēngrì", hanviet: "Sinh nhật", meaning: "Sinh nhật" },
+  { level: "Bài 4", hanzi: "快乐", pinyin: "kuàilè", hanviet: "Khoái lạc", meaning: "Vui vẻ" },
+  { level: "Bài 4", hanzi: "给", pinyin: "gěi", hanviet: "Cấp", meaning: "Cho" },
+  { level: "Bài 4", hanzi: "接", pinyin: "jiē", hanviet: "Tiếp", meaning: "Đón, nhận" },
+  { level: "Bài 4", hanzi: "晚上", pinyin: "wǎnshang", hanviet: "Vãn thượng", meaning: "Buổi tối" },
+  { level: "Bài 4", hanzi: "问", pinyin: "wèn", hanviet: "Vấn", meaning: "Hỏi" },
+  { level: "Bài 4", hanzi: "非常", pinyin: "fēicháng", hanviet: "Phi thường", meaning: "Rất" },
+  { level: "Bài 4", hanzi: "开始", pinyin: "kāishǐ", hanviet: "Khai thủy", meaning: "Bắt đầu" },
+  { level: "Bài 4", hanzi: "已经", pinyin: "yǐjīng", hanviet: "Dĩ kinh", meaning: "Đã" },
+  { level: "Bài 4", hanzi: "长", pinyin: "cháng", hanviet: "Trường", meaning: "Dài" },
+  { level: "Bài 4", hanzi: "两", pinyin: "liǎng", hanviet: "Lưỡng", meaning: "Hai" },
+  { level: "Bài 4", hanzi: "帮", pinyin: "bāng", hanviet: "Bang", meaning: "Giúp" },
+  { level: "Bài 4", hanzi: "介绍", pinyin: "jièshào", hanviet: "Giới thiệu", meaning: "Giới thiệu" },
+  { level: "Bài 4", hanzi: "电话", pinyin: "diànhuà", hanviet: "Điện thoại", meaning: "Điện thoại" },
+  { level: "Bài 4", hanzi: "打电话", pinyin: "dǎ diànhuà", hanviet: "Đả điện thoại", meaning: "Gọi điện" },
+  { level: "Bài 4", hanzi: "看书", pinyin: "kàn shū", hanviet: "Khán thư", meaning: "Đọc sách" },
+  { level: "Bài 4", hanzi: "工作", pinyin: "gōngzuò", hanviet: "Công tác", meaning: "Công việc" },
+  { level: "Bài 4", hanzi: "儿子", pinyin: "érzi", hanviet: "Nhi tử", meaning: "Con trai" },
+  { level: "Bài 4", hanzi: "认识", pinyin: "rènshi", hanviet: "Nhận thức", meaning: "Quen biết" },
+  { level: "Bài 4", hanzi: "大学同学", pinyin: "dàxué tóngxué", hanviet: "Đại học đồng học", meaning: "Bạn đại học" },
+  { level: "Bài 4", hanzi: "帮助", pinyin: "bāngzhù", hanviet: "Bang trợ", meaning: "Giúp đỡ" },
 
   // Bài 5
-  { lesson: 5, hanzi: '外面', pinyin: 'wàimian', meaning: 'Bên ngoài' },
-  { lesson: 5, hanzi: '准备', pinyin: 'zhǔnbèi', meaning: 'Định, dự định, chuẩn bị' },
-  { lesson: 5, hanzi: '就', pinyin: 'jiù', meaning: 'Thì, ngay (đưa ra giải pháp)' },
-  { lesson: 5, hanzi: '鱼', pinyin: 'yú', meaning: 'Cá, món cá' },
-  { lesson: 5, hanzi: '吧', pinyin: 'ba', meaning: 'Trợ từ (đề nghị, thương lượng)' },
-  { lesson: 5, hanzi: '件', pinyin: 'jiàn', meaning: 'Lượng từ: Chiếc, cái (áo, công việc)' },
-  { lesson: 5, hanzi: '还', pinyin: 'hái', meaning: 'Phó từ: Cũng, khá, còn (tạm ổn)' },
-  { lesson: 5, hanzi: '可以', pinyin: 'kěyǐ', meaning: 'Được, tạm được' },
-  { lesson: 5, hanzi: '不错', pinyin: 'búcuò', meaning: 'Khá tốt, tuyệt, không tệ' },
-  { lesson: 5, hanzi: '考试', pinyin: 'kǎoshì', meaning: 'Cuộc thi, bài kiểm tra' },
-  { lesson: 5, hanzi: '意思', pinyin: 'yìsi', meaning: 'Ý nghĩa, ý' },
-  { lesson: 5, hanzi: '咖啡', pinyin: 'kāfēi', meaning: 'Cà phê' },
-  { lesson: 5, hanzi: '对', pinyin: 'duì', meaning: 'Giới từ: Đối với, cho' },
-  { lesson: 5, hanzi: '以后', pinyin: 'yǐhòu', meaning: 'Sau này, về sau' },
-  { lesson: 5, hanzi: '衣服', pinyin: 'yīfu', meaning: 'Quần áo' },
-  { lesson: 5, hanzi: '打球', pinyin: 'dǎ qiú', meaning: 'Chơi bóng / Đánh bóng' },
-  { lesson: 5, hanzi: '饭馆', pinyin: 'fànguǎn', meaning: 'Quán ăn' },
-  { lesson: 5, hanzi: '咖啡馆', pinyin: 'kāfēiguǎn', meaning: 'Quán cà phê' },
-  { lesson: 5, hanzi: '商店', pinyin: 'shāngdiàn', meaning: 'Cửa hàng' },
-  { lesson: 5, hanzi: '学校', pinyin: 'xuéxiào', meaning: 'Trường học' },
-  { lesson: 5, hanzi: '有点儿', pinyin: 'yǒudiǎnr', meaning: 'Hơi..., một chút...' },
-  { lesson: 5, hanzi: '试', pinyin: 'shì', meaning: 'Thử' },
-  { lesson: 5, hanzi: '试试', pinyin: 'shìshi', meaning: 'Thử một chút' },
-  { lesson: 5, hanzi: '有意思', pinyin: 'yǒu yìsi', meaning: 'Thú vị, có ý nghĩa' },
+  { level: "Bài 5", hanzi: "外面", pinyin: "wàimian", hanviet: "Ngoại diện", meaning: "Bên ngoài" },
+  { level: "Bài 5", hanzi: "准备", pinyin: "zhǔnbèi", hanviet: "Chuẩn bị", meaning: "Chuẩn bị" },
+  { level: "Bài 5", hanzi: "就", pinyin: "jiù", hanviet: "Tựu", meaning: "Thì, ngay" },
+  { level: "Bài 5", hanzi: "鱼", pinyin: "yú", hanviet: "Ngư", meaning: "Cá" },
+  { level: "Bài 5", hanzi: "吧", pinyin: "ba", hanviet: "Ba", meaning: "Nhé" },
+  { level: "Bài 5", hanzi: "件", pinyin: "jiàn", hanviet: "Kiện", meaning: "Cái, chiếc" },
+  { level: "Bài 5", hanzi: "还", pinyin: "hái", hanviet: "Hoàn", meaning: "Còn, vẫn" },
+  { level: "Bài 5", hanzi: "可以", pinyin: "kěyǐ", hanviet: "Khả dĩ", meaning: "Có thể" },
+  { level: "Bài 5", hanzi: "不错", pinyin: "búcuò", hanviet: "Bất thác", meaning: "Không tệ" },
+  { level: "Bài 5", hanzi: "考试", pinyin: "kǎoshì", hanviet: "Khảo thí", meaning: "Thi" },
+  { level: "Bài 5", hanzi: "意思", pinyin: "yìsi", hanviet: "Ý tư", meaning: "Ý nghĩa" },
+  { level: "Bài 5", hanzi: "咖啡", pinyin: "kāfēi", hanviet: "Kha phi", meaning: "Cà phê" },
+  { level: "Bài 5", hanzi: "对", pinyin: "duì", hanviet: "Đối", meaning: "Đúng, đối với" },
+  { level: "Bài 5", hanzi: "以后", pinyin: "yǐhòu", hanviet: "Dĩ hậu", meaning: "Sau này" },
+  { level: "Bài 5", hanzi: "衣服", pinyin: "yīfu", hanviet: "Y phục", meaning: "Quần áo" },
+  { level: "Bài 5", hanzi: "打球", pinyin: "dǎ qiú", hanviet: "Đả cầu", meaning: "Chơi bóng" },
+  { level: "Bài 5", hanzi: "饭馆", pinyin: "fànguǎn", hanviet: "Phạn quán", meaning: "Quán ăn" },
+  { level: "Bài 5", hanzi: "咖啡馆", pinyin: "kāfēiguǎn", hanviet: "Kha phi quán", meaning: "Quán cà phê" },
+  { level: "Bài 5", hanzi: "商店", pinyin: "shāngdiàn", hanviet: "Thương điếm", meaning: "Cửa hàng" },
+  { level: "Bài 5", hanzi: "学校", pinyin: "xuéxiào", hanviet: "Học hiệu", meaning: "Trường học" },
+  { level: "Bài 5", hanzi: "有点儿", pinyin: "yǒudiǎnr", hanviet: "Hữu điểm nhi", meaning: "Hơi..." },
+  { level: "Bài 5", hanzi: "试", pinyin: "shì", hanviet: "Thí", meaning: "Thử" },
+  { level: "Bài 5", hanzi: "试试", pinyin: "shìshi", hanviet: "Thí thí", meaning: "Thử xem" },
+  { level: "Bài 5", hanzi: "有意思", pinyin: "yǒu yìsi", hanviet: "Hữu ý tư", meaning: "Thú vị" },
 
   // Bài 6
-  { lesson: 6, hanzi: '门', pinyin: 'mén', meaning: 'Cửa, cổng' },
-  { lesson: 6, hanzi: '外', pinyin: 'wài', meaning: 'Bên ngoài' },
-  { lesson: 6, hanzi: '自行车', pinyin: 'zìxíngchē', meaning: 'Xe đạp' },
-  { lesson: 6, hanzi: '羊肉', pinyin: 'yángròu', meaning: 'Thịt dê, thịt cừu' },
-  { lesson: 6, hanzi: '好吃', pinyin: 'hǎochī', meaning: 'Ngon (dùng cho món ăn)' },
-  { lesson: 6, hanzi: '面条', pinyin: 'miàntiáo', meaning: 'Mì sợi' },
-  { lesson: 6, hanzi: '打篮球', pinyin: 'dǎ lánqiú', meaning: 'Chơi bóng rổ' },
-  { lesson: 6, hanzi: '经常', pinyin: 'jīngcháng', meaning: 'Thường xuyên' },
-  { lesson: 6, hanzi: '公斤', pinyin: 'gōngjīn', meaning: 'Kilôgam' },
-  { lesson: 6, hanzi: '姐姐', pinyin: 'jiějie', meaning: 'Chị gái' },
-  { lesson: 6, hanzi: '游泳', pinyin: 'yóuyǒng', meaning: 'Bơi, bơi lội' },
-  { lesson: 6, hanzi: '怎么', pinyin: 'zěnme', meaning: 'Sao, tại sao (hỏi nguyên nhân)' },
-  { lesson: 6, hanzi: '因为', pinyin: 'yīnwèi', meaning: 'Bởi vì' },
-  { lesson: 6, hanzi: '所以', pinyin: 'suǒyǐ', meaning: 'Cho nên' },
-  { lesson: 6, hanzi: '天天', pinyin: 'tiāntiān', meaning: 'Hàng ngày, ngày ngày' },
-  { lesson: 6, hanzi: '门外', pinyin: 'mén wài', meaning: 'Bên ngoài cửa' },
-  { lesson: 6, hanzi: '骑自行车', pinyin: 'qí zìxíngchē', meaning: 'Đi xe đạp / Cưỡi xe đạp' },
-  { lesson: 6, hanzi: '鸡肉', pinyin: 'jīròu', meaning: 'Thịt gà' },
-  { lesson: 6, hanzi: '面馆儿', pinyin: 'miànguǎnr', meaning: 'Quán mì' },
+  { level: "Bài 6", hanzi: "门", pinyin: "mén", hanviet: "Môn", meaning: "Cửa" },
+  { level: "Bài 6", hanzi: "外", pinyin: "wài", hanviet: "Ngoại", meaning: "Ngoài" },
+  { level: "Bài 6", hanzi: "自行车", pinyin: "zìxíngchē", hanviet: "Tự hành xa", meaning: "Xe đạp" },
+  { level: "Bài 6", hanzi: "羊肉", pinyin: "yángròu", hanviet: "Dương nhục", meaning: "Thịt dê" },
+  { level: "Bài 6", hanzi: "好吃", pinyin: "hǎochī", hanviet: "Hảo cật", meaning: "Ngon" },
+  { level: "Bài 6", hanzi: "面条", pinyin: "miàntiáo", hanviet: "Diện điều", meaning: "Mì sợi" },
+  { level: "Bài 6", hanzi: "打篮球", pinyin: "dǎ lánqiú", hanviet: "Đả lam cầu", meaning: "Chơi bóng rổ" },
+  { level: "Bài 6", hanzi: "经常", pinyin: "jīngcháng", hanviet: "Kinh thường", meaning: "Thường xuyên" },
+  { level: "Bài 6", hanzi: "公斤", pinyin: "gōngjīn", hanviet: "Công cân", meaning: "Kilogam" },
+  { level: "Bài 6", hanzi: "姐姐", pinyin: "jiějie", hanviet: "Tỷ tỷ", meaning: "Chị gái" },
+  { level: "Bài 6", hanzi: "游泳", pinyin: "yóuyǒng", hanviet: "Du dũng", meaning: "Bơi lội" },
+  { level: "Bài 6", hanzi: "怎么", pinyin: "zěnme", hanviet: "Trẩm ma", meaning: "Sao, thế nào" },
+  { level: "Bài 6", hanzi: "因为", pinyin: "yīnwèi", hanviet: "Nhân vi", meaning: "Bởi vì" },
+  { level: "Bài 6", hanzi: "所以", pinyin: "suǒyǐ", hanviet: "Sở dĩ", meaning: "Cho nên" },
+  { level: "Bài 6", hanzi: "天天", pinyin: "tiāntiān", hanviet: "Thiên thiên", meaning: "Hàng ngày" },
+  { level: "Bài 6", hanzi: "门外", pinyin: "mén wài", hanviet: "Môn ngoại", meaning: "Ngoài cửa" },
+  { level: "Bài 6", hanzi: "骑自行车", pinyin: "qí zìxíngchē", hanviet: "Kỵ tự hành xa", meaning: "Đi xe đạp" },
+  { level: "Bài 6", hanzi: "鸡肉", pinyin: "jīròu", hanviet: "Kê nhục", meaning: "Thịt gà" },
+  { level: "Bài 6", hanzi: "面馆儿", pinyin: "miànguǎnr", hanviet: "Diện quán nhi", meaning: "Quán mì" },
 
   // Bài 7
-  { lesson: 7, hanzi: '教室', pinyin: 'jiàoshì', meaning: 'Lớp học' },
-  { lesson: 7, hanzi: '机场', pinyin: 'jīchǎng', meaning: 'Sân bay' },
-  { lesson: 7, hanzi: '路', pinyin: 'lù', meaning: 'Đường, lối đi' },
-  { lesson: 7, hanzi: '离', pinyin: 'lí', meaning: 'Cách (chỉ khoảng cách)' },
-  { lesson: 7, hanzi: '公司', pinyin: 'gōngsī', meaning: 'Công ty' },
-  { lesson: 7, hanzi: '远', pinyin: 'yuǎn', meaning: 'Xa' },
-  { lesson: 7, hanzi: '公共汽车', pinyin: 'gōnggòng qìchē', meaning: 'Xe buýt' },
-  { lesson: 7, hanzi: '小时', pinyin: 'xiǎoshí', meaning: 'Giờ, tiếng đồng hồ' },
-  { lesson: 7, hanzi: '慢', pinyin: 'màn', meaning: 'Chậm' },
-  { lesson: 7, hanzi: '快', pinyin: 'kuài', meaning: 'Nhanh' },
-  { lesson: 7, hanzi: '过', pinyin: 'guò', meaning: 'Ăn (mừng), trải qua' },
-  { lesson: 7, hanzi: '走', pinyin: 'zǒu', meaning: 'Đi, đi bộ' },
-  { lesson: 7, hanzi: '到', pinyin: 'dào', meaning: 'Đến, tới' },
-  { lesson: 7, hanzi: '近', pinyin: 'jìn', meaning: 'Gần' },
-  { lesson: 7, hanzi: '出租车', pinyin: 'chūzūchē', meaning: 'Xe taxi' },
-  { lesson: 7, hanzi: '飞机', pinyin: 'fēijī', meaning: 'Máy bay' },
-  { lesson: 7, hanzi: '坐', pinyin: 'zuò', meaning: 'Đi (phương tiện), ngồi' },
-  { lesson: 7, hanzi: '开车', pinyin: 'kāi chē', meaning: 'Lái xe ô tô' },
-  { lesson: 7, hanzi: '走路', pinyin: 'zǒulù', meaning: 'Đi bộ' },
-  { lesson: 7, hanzi: '分钟', pinyin: 'fēnzhōng', meaning: 'Phút' },
-  { lesson: 7, hanzi: '进站', pinyin: 'jìn zhàn', meaning: 'Vào ga, vào trạm' },
-  { lesson: 7, hanzi: '车站', pinyin: 'chēzhàn', meaning: 'Bến xe, nhà ga' },
-  { lesson: 7, hanzi: '公园', pinyin: 'gōngyuán', meaning: 'Công viên' },
-  { lesson: 7, hanzi: '公用电话', pinyin: 'gōngyòng diànhuà', meaning: 'Điện thoại công cộng' },
+  { level: "Bài 7", hanzi: "教室", pinyin: "jiàoshì", hanviet: "Giáo thất", meaning: "Lớp học" },
+  { level: "Bài 7", hanzi: "机场", pinyin: "jīchǎng", hanviet: "Cơ trường", meaning: "Sân bay" },
+  { level: "Bài 7", hanzi: "路", pinyin: "lù", hanviet: "Lộ", meaning: "Đường" },
+  { level: "Bài 7", hanzi: "离", pinyin: "lí", hanviet: "Ly", meaning: "Cách" },
+  { level: "Bài 7", hanzi: "公司", pinyin: "gōngsī", hanviet: "Công ty", meaning: "Công ty" },
+  { level: "Bài 7", hanzi: "远", pinyin: "yuǎn", hanviet: "Viễn", meaning: "Xa" },
+  { level: "Bài 7", hanzi: "公共汽车", pinyin: "gōnggòng qìchē", hanviet: "Công cộng khí xa", meaning: "Xe buýt" },
+  { level: "Bài 7", hanzi: "小时", pinyin: "xiǎoshí", hanviet: "Tiểu thời", meaning: "Giờ" },
+  { level: "Bài 7", hanzi: "慢", pinyin: "màn", hanviet: "Mạn", meaning: "Chậm" },
+  { level: "Bài 7", hanzi: "快", pinyin: "kuài", hanviet: "Khoái", meaning: "Nhanh" },
+  { level: "Bài 7", hanzi: "过", pinyin: "guò", hanviet: "Quá", meaning: "Qua, từng" },
+  { level: "Bài 7", hanzi: "走", pinyin: "zǒu", hanviet: "Tẩu", meaning: "Đi" },
+  { level: "Bài 7", hanzi: "到", pinyin: "dào", hanviet: "Đáo", meaning: "Đến" },
+  { level: "Bài 7", hanzi: "近", pinyin: "jìn", hanviet: "Cận", meaning: "Gần" },
+  { level: "Bài 7", hanzi: "出租车", pinyin: "chūzūchē", hanviet: "Xuất tô xa", meaning: "Taxi" },
+  { level: "Bài 7", hanzi: "飞机", pinyin: "fēijī", hanviet: "Phi cơ", meaning: "Máy bay" },
+  { level: "Bài 7", hanzi: "坐", pinyin: "zuò", hanviet: "Tọa", meaning: "Ngồi" },
+  { level: "Bài 7", hanzi: "开车", pinyin: "kāi chē", hanviet: "Khai xa", meaning: "Lái xe" },
+  { level: "Bài 7", hanzi: "走路", pinyin: "zǒulù", hanviet: "Tẩu lộ", meaning: "Đi bộ" },
+  { level: "Bài 7", hanzi: "分钟", pinyin: "fēnzhōng", hanviet: "Phân chung", meaning: "Phút" },
+  { level: "Bài 7", hanzi: "进站", pinyin: "jìn zhàn", hanviet: "Tiến trạm", meaning: "Vào ga" },
+  { level: "Bài 7", hanzi: "车站", pinyin: "chēzhàn", hanviet: "Xa trạm", meaning: "Bến xe" },
+  { level: "Bài 7", hanzi: "公园", pinyin: "gōngyuán", hanviet: "Công viên", meaning: "Công viên" },
+  { level: "Bài 7", hanzi: "公用电话", pinyin: "gōngyòng diànhuà", hanviet: "Công dụng điện thoại", meaning: "ĐT công cộng" },
 
   // Bài 8
-  { lesson: 8, hanzi: '再', pinyin: 'zài', meaning: 'Lại, nữa (hành động tương lai)' },
-  { lesson: 8, hanzi: '让', pinyin: 'ràng', meaning: 'Cho phép, bảo, để (ai làm gì)' },
-  { lesson: 8, hanzi: '告诉', pinyin: 'gàosu', meaning: 'Nói cho biết, bảo' },
-  { lesson: 8, hanzi: '等', pinyin: 'děng', meaning: 'Chờ, đợi' },
-  { lesson: 8, hanzi: '找', pinyin: 'zhǎo', meaning: 'Tìm, tìm kiếm' },
-  { lesson: 8, hanzi: '事情', pinyin: 'shìqing', meaning: 'Việc, sự việc, chuyện' },
-  { lesson: 8, hanzi: '服务员', pinyin: 'fúwùyuán', meaning: 'Nhân viên phục vụ' },
-  { lesson: 8, hanzi: '白', pinyin: 'bái', meaning: 'Trắng, màu trắng' },
-  { lesson: 8, hanzi: '黑', pinyin: 'hēi', meaning: 'Đen, màu đen' },
-  { lesson: 8, hanzi: '贵', pinyin: 'guì', meaning: 'Đắt, đắt đỏ' },
-  { lesson: 8, hanzi: '便宜', pinyin: 'piányi', meaning: 'Rẻ' },
-  { lesson: 8, hanzi: '白色', pinyin: 'báisè', meaning: 'Màu trắng' },
-  { lesson: 8, hanzi: '黑色', pinyin: 'hēisè', meaning: 'Màu đen' },
-  { lesson: 8, hanzi: '茶馆儿', pinyin: 'cháguǎnr', meaning: 'Quán trà' },
-  { lesson: 8, hanzi: '电视机', pinyin: 'diànshìjī', meaning: 'Máy thu hình (tivi)' },
-  { lesson: 8, hanzi: '房子', pinyin: 'fángzi', meaning: 'Căn nhà' },
-  { lesson: 8, hanzi: '鸡蛋面', pinyin: 'jīdànmiàn', meaning: 'Mì trứng' },
-  { lesson: 8, hanzi: '叫', pinyin: 'jiào', meaning: 'Gọi, bảo (trong câu kiêm ngữ)' },
-  { lesson: 8, hanzi: '请', pinyin: 'qǐng', meaning: 'Mời, xin (trong câu kiêm ngữ)' },
-  { lesson: 8, hanzi: '等一下', pinyin: 'děng yíxià', meaning: 'Đợi một chút' },
-  { lesson: 8, hanzi: '等等', pinyin: 'děngděng', meaning: 'Chờ tý, vân vân' },
+  { level: "Bài 8", hanzi: "再", pinyin: "zài", hanviet: "Tái", meaning: "Lại" },
+  { level: "Bài 8", hanzi: "让", pinyin: "ràng", hanviet: "Nhượng", meaning: "Cho phép, để" },
+  { level: "Bài 8", hanzi: "告诉", pinyin: "gàosu", hanviet: "Cáo tố", meaning: "Nói cho biết" },
+  { level: "Bài 8", hanzi: "等", pinyin: "děng", hanviet: "Đẳng", meaning: "Đợi" },
+  { level: "Bài 8", hanzi: "找", pinyin: "zhǎo", hanviet: "Trảo", meaning: "Tìm" },
+  { level: "Bài 8", hanzi: "事情", pinyin: "shìqing", hanviet: "Sự tình", meaning: "Sự việc" },
+  { level: "Bài 8", hanzi: "服务员", pinyin: "fúwùyuán", hanviet: "Phục vụ viên", meaning: "Nhân viên" },
+  { level: "Bài 8", hanzi: "白", pinyin: "bái", hanviet: "Bạch", meaning: "Trắng" },
+  { level: "Bài 8", hanzi: "黑", pinyin: "hēi", hanviet: "Hắc", meaning: "Đen" },
+  { level: "Bài 8", hanzi: "贵", pinyin: "guì", hanviet: "Quý", meaning: "Đắt" },
+  { level: "Bài 8", hanzi: "便宜", pinyin: "piányi", hanviet: "Tiện nghi", meaning: "Rẻ" },
+  { level: "Bài 8", hanzi: "白色", pinyin: "báisè", hanviet: "Bạch sắc", meaning: "Màu trắng" },
+  { level: "Bài 8", hanzi: "黑色", pinyin: "hēisè", hanviet: "Hắc sắc", meaning: "Màu đen" },
+  { level: "Bài 8", hanzi: "茶馆儿", pinyin: "cháguǎnr", hanviet: "Trà quán nhi", meaning: "Quán trà" },
+  { level: "Bài 8", hanzi: "电视机", pinyin: "diànshìjī", hanviet: "Điện thị cơ", meaning: "Tivi" },
+  { level: "Bài 8", hanzi: "房子", pinyin: "fángzi", hanviet: "Phòng tử", meaning: "Căn nhà" },
+  { level: "Bài 8", hanzi: "鸡蛋面", pinyin: "jīdànmiàn", hanviet: "Kê đản diện", meaning: "Mì trứng" },
+  { level: "Bài 8", hanzi: "叫", pinyin: "jiào", hanviet: "Khiếu", meaning: "Gọi, bảo" },
+  { level: "Bài 8", hanzi: "请", pinyin: "qǐng", hanviet: "Thỉnh", meaning: "Mời" },
+  { level: "Bài 8", hanzi: "等一下", pinyin: "děng yíxià", hanviet: "Đẳng nhất hạ", meaning: "Đợi chút" },
+  { level: "Bài 8", hanzi: "等等", pinyin: "děngděng", hanviet: "Đẳng đẳng", meaning: "Vân vân" },
 
   // Bài 9
-  { lesson: 9, hanzi: '题', pinyin: 'tí', meaning: 'Đề bài, câu hỏi, bài tập' },
-  { lesson: 9, hanzi: '完', pinyin: 'wán', meaning: 'Xong, hết, hoàn thành' },
-  { lesson: 9, hanzi: '跳舞', pinyin: 'tiào wǔ', meaning: 'Nhảy múa' },
-  { lesson: 9, hanzi: '第一', pinyin: 'dì-yī', meaning: 'Thứ nhất, đầu tiên' },
-  { lesson: 9, hanzi: '洗', pinyin: 'xǐ', meaning: 'Rửa, giặt' },
-  { lesson: 9, hanzi: '错', pinyin: 'cuò', meaning: 'Sai, nhầm' },
-  { lesson: 9, hanzi: '懂', pinyin: 'dǒng', meaning: 'Hiểu, nắm rõ' },
-  { lesson: 9, hanzi: '从', pinyin: 'cóng', meaning: 'Từ (chỉ điểm khởi đầu)' },
-  { lesson: 9, hanzi: '希望', pinyin: 'xīwàng', meaning: 'Hy vọng, mong muốn' },
-  { lesson: 9, hanzi: '问题', pinyin: 'wèntí', meaning: 'Câu hỏi, vấn đề' },
-  { lesson: 9, hanzi: '欢迎', pinyin: 'huānyíng', meaning: 'Hoan nghênh, chào đón' },
-  { lesson: 9, hanzi: '上班', pinyin: 'shàngbān', meaning: 'Đi làm' },
-  { lesson: 9, hanzi: '做完', pinyin: 'zuò wán', meaning: 'Làm xong' },
-  { lesson: 9, hanzi: '听懂', pinyin: 'tīng dǒng', meaning: 'Nghe hiểu' },
-  { lesson: 9, hanzi: '做错', pinyin: 'zuò cuò', meaning: 'Làm sai' },
-  { lesson: 9, hanzi: '写错', pinyin: 'xiě cuò', meaning: 'Viết sai' },
-  { lesson: 9, hanzi: '看见', pinyin: 'kàn jiàn', meaning: 'Nhìn thấy' },
-  { lesson: 9, hanzi: '听见', pinyin: 'tīng jiàn', meaning: 'Nghe thấy' },
-  { lesson: 9, hanzi: '唱歌', pinyin: 'chàng gē', meaning: 'Hát' },
-  { lesson: 9, hanzi: '洗衣服', pinyin: 'xǐ yīfu', meaning: 'Giặt quần áo' },
-  { lesson: 9, hanzi: '洗手', pinyin: 'xǐ shǒu', meaning: 'Rửa tay' },
-  { lesson: 9, hanzi: '从……到……', pinyin: 'cóng ... dào ...', meaning: 'Từ... đến...' },
-  { lesson: 9, hanzi: '没问题', pinyin: 'méi wèntí', meaning: 'Không có vấn đề gì' },
+  { level: "Bài 9", hanzi: "题", pinyin: "tí", hanviet: "Đề", meaning: "Đề bài" },
+  { level: "Bài 9", hanzi: "完", pinyin: "wán", hanviet: "Hoàn", meaning: "Xong" },
+  { level: "Bài 9", hanzi: "跳舞", pinyin: "tiào wǔ", hanviet: "Khiêu vũ", meaning: "Nhảy múa" },
+  { level: "Bài 9", hanzi: "第一", pinyin: "dì-yī", hanviet: "Đệ nhất", meaning: "Thứ nhất" },
+  { level: "Bài 9", hanzi: "洗", pinyin: "xǐ", hanviet: "Tẩy", meaning: "Rửa" },
+  { level: "Bài 9", hanzi: "错", pinyin: "cuò", hanviet: "Thác", meaning: "Sai" },
+  { level: "Bài 9", hanzi: "懂", pinyin: "dǒng", hanviet: "Hiểu", meaning: "Hiểu" },
+  { level: "Bài 9", hanzi: "从", pinyin: "cóng", hanviet: "Tùng", meaning: "Từ" },
+  { level: "Bài 9", hanzi: "希望", pinyin: "xīwàng", hanviet: "Hy vọng", meaning: "Hy vọng" },
+  { level: "Bài 9", hanzi: "问题", pinyin: "wèntí", hanviet: "Vấn đề", meaning: "Vấn đề" },
+  { level: "Bài 9", hanzi: "欢迎", pinyin: "huānyíng", hanviet: "Hoan nghênh", meaning: "Chào mừng" },
+  { level: "Bài 9", hanzi: "上班", pinyin: "shàngbān", hanviet: "Thượng ban", meaning: "Đi làm" },
+  { level: "Bài 9", hanzi: "做完", pinyin: "zuò wán", hanviet: "Tố hoàn", meaning: "Làm xong" },
+  { level: "Bài 9", hanzi: "听懂", pinyin: "tīng dǒng", hanviet: "Thính hiểu", meaning: "Nghe hiểu" },
+  { level: "Bài 9", hanzi: "做错", pinyin: "zuò cuò", hanviet: "Tố thác", meaning: "Làm sai" },
+  { level: "Bài 9", hanzi: "写错", pinyin: "xiě cuò", hanviet: "Tả thác", meaning: "Viết sai" },
+  { level: "Bài 9", hanzi: "看见", pinyin: "kàn jiàn", hanviet: "Khán kiến", meaning: "Nhìn thấy" },
+  { level: "Bài 9", hanzi: "听见", pinyin: "tīng jiàn", hanviet: "Thính kiến", meaning: "Nghe thấy" },
+  { level: "Bài 9", hanzi: "唱歌", pinyin: "chàng gē", hanviet: "Xướng ca", meaning: "Hát" },
+  { level: "Bài 9", hanzi: "洗衣服", pinyin: "xǐ yīfu", hanviet: "Tẩy y phục", meaning: "Giặt đồ" },
+  { level: "Bài 9", hanzi: "洗手", pinyin: "xǐ shǒu", hanviet: "Tẩy thủ", meaning: "Rửa tay" },
+  { level: "Bài 9", hanzi: "从……到……", pinyin: "cóng ... dào ...", hanviet: "Tùng... đáo...", meaning: "Từ... đến..." },
+  { level: "Bài 9", hanzi: "没问题", pinyin: "méi wèntí", hanviet: "Một vấn đề", meaning: "Không sao" },
 
   // Bài 10
-  { lesson: 10, hanzi: '课', pinyin: 'kè', meaning: 'Bài học, tiết học' },
-  { lesson: 10, hanzi: '帮助', pinyin: 'bāngzhù', meaning: 'Giúp đỡ' },
-  { lesson: 10, hanzi: '别', pinyin: 'bié', meaning: 'Đừng, không nên (khuyên ngăn)' },
-  { lesson: 10, hanzi: '哥哥', pinyin: 'gēge', meaning: 'Anh trai' },
-  { lesson: 10, hanzi: '鸡蛋', pinyin: 'jīdàn', meaning: 'Trứng gà' },
-  { lesson: 10, hanzi: '西瓜', pinyin: 'xīguā', meaning: 'Dưa hấu' },
-  { lesson: 10, hanzi: '正在', pinyin: 'zhèngzài', meaning: 'Đang (chỉ hành động đang diễn ra)' },
-  { lesson: 10, hanzi: '手机', pinyin: 'shǒujī', meaning: 'Điện thoại di động' },
-  { lesson: 10, hanzi: '洗', pinyin: 'xǐ', meaning: 'Rửa, giặt' },
-  { lesson: 10, hanzi: '电脑', pinyin: 'diànnǎo', meaning: 'Máy tính' },
-  { lesson: 10, hanzi: '桌子', pinyin: 'zhuōzi', meaning: 'Cái bàn' },
-  { lesson: 10, hanzi: '看电视', pinyin: 'kàn diànshì', meaning: 'Xem tivi' },
-  { lesson: 10, hanzi: '玩儿电脑', pinyin: 'wánr diànnǎo', meaning: 'Chơi máy tính' },
-  { lesson: 10, hanzi: '写名字', pinyin: 'xiě míngzi', meaning: 'Viết tên' },
-  { lesson: 10, hanzi: '别……了', pinyin: 'bié ... le', meaning: 'Đừng... nữa' },
-  { lesson: 10, hanzi: '吃药', pinyin: 'chī yào', meaning: 'Uống thuốc' },
-  { lesson: 10, hanzi: '正在……呢', pinyin: 'zhèngzài ... ne', meaning: 'Đang...' },
-  { lesson: 10, hanzi: '游泳馆', pinyin: 'yóuyǒngguǎn', meaning: 'Bể bơi' },
-  { lesson: 10, hanzi: '早饭', pinyin: 'zǎofàn', meaning: 'Bữa sáng' },
+  { level: "Bài 10", hanzi: "课", pinyin: "kè", hanviet: "Khóa", meaning: "Bài học" },
+  { level: "Bài 10", hanzi: "帮助", pinyin: "bāngzhù", hanviet: "Bang trợ", meaning: "Giúp đỡ" },
+  { level: "Bài 10", hanzi: "别", pinyin: "bié", hanviet: "Biệt", meaning: "Đừng" },
+  { level: "Bài 10", hanzi: "哥哥", pinyin: "gēge", hanviet: "Ca ca", meaning: "Anh trai" },
+  { level: "Bài 10", hanzi: "鸡蛋", pinyin: "jīdàn", hanviet: "Kê đản", meaning: "Trứng gà" },
+  { level: "Bài 10", hanzi: "西瓜", pinyin: "xīguā", hanviet: "Tây qua", meaning: "Dưa hấu" },
+  { level: "Bài 10", hanzi: "正在", pinyin: "zhèngzài", hanviet: "Chính tại", meaning: "Đang" },
+  { level: "Bài 10", hanzi: "手机", pinyin: "shǒujī", hanviet: "Thủ cơ", meaning: "Điện thoại" },
+  { level: "Bài 10", hanzi: "洗", pinyin: "xǐ", hanviet: "Tẩy", meaning: "Rửa" },
+  { level: "Bài 10", hanzi: "电脑", pinyin: "diànnǎo", hanviet: "Điện não", meaning: "Máy tính" },
+  { level: "Bài 10", hanzi: "桌子", pinyin: "zhuōzi", hanviet: "Trác tử", meaning: "Cái bàn" },
+  { level: "Bài 10", hanzi: "看电视", pinyin: "kàn diànshì", hanviet: "Khán điện thị", meaning: "Xem tivi" },
+  { level: "Bài 10", hanzi: "玩儿电脑", pinyin: "wánr diànnǎo", hanviet: "Ngoạn nhi điện não", meaning: "Chơi máy tính" },
+  { level: "Bài 10", hanzi: "写名字", pinyin: "xiě míngzi", hanviet: "Tả danh tự", meaning: "Viết tên" },
+  { level: "Bài 10", hanzi: "别……了", pinyin: "bié ... le", hanviet: "Biệt... liễu", meaning: "Đừng... nữa" },
+  { level: "Bài 10", hanzi: "吃药", pinyin: "chī yào", hanviet: "Cật dược", meaning: "Uống thuốc" },
+  { level: "Bài 10", hanzi: "正在……呢", pinyin: "zhèngzài ... ne", hanviet: "Chính tại... ni", meaning: "Đang..." },
+  { level: "Bài 10", hanzi: "游泳馆", pinyin: "yóuyǒngguǎn", hanviet: "Du dũng quán", meaning: "Bể bơi" },
+  { level: "Bài 10", hanzi: "早饭", pinyin: "zǎofàn", hanviet: "Tảo phạn", meaning: "Bữa sáng" },
 
   // Bài 11
-  { lesson: 11, hanzi: '唱歌', pinyin: 'chànggē', meaning: 'Hát' },
-  { lesson: 11, hanzi: '男', pinyin: 'nán', meaning: 'Nam, giới tính nam' },
-  { lesson: 11, hanzi: '女', pinyin: 'nǚ', meaning: 'Nữ, giới tính nữ' },
-  { lesson: 11, hanzi: '孩子', pinyin: 'háizi', meaning: 'Con cái, đứa trẻ' },
-  { lesson: 11, hanzi: '右边', pinyin: 'yòubian', meaning: 'Bên phải' },
-  { lesson: 11, hanzi: '比', pinyin: 'bǐ', meaning: 'So với (cấu trúc so sánh)' },
-  { lesson: 11, hanzi: '便宜', pinyin: 'piányi', meaning: 'Rẻ' },
-  { lesson: 11, hanzi: '说话', pinyin: 'shuōhuà', meaning: 'Nói chuyện' },
-  { lesson: 11, hanzi: '可能', pinyin: 'kěnéng', meaning: 'Có thể, có lẽ' },
-  { lesson: 11, hanzi: '去年', pinyin: 'qùnián', meaning: 'Năm ngoái' },
-  { lesson: 11, hanzi: '姓', pinyin: 'xìng', meaning: 'Mang họ, họ' },
-  { lesson: 11, hanzi: '苹果', pinyin: 'píngguǒ', meaning: 'Quả táo' },
-  { lesson: 11, hanzi: '听歌', pinyin: 'tīng gē', meaning: 'Nghe nhạc' },
-  { lesson: 11, hanzi: '女孩儿', pinyin: 'nǚháir', meaning: 'Bé gái, cô gái' },
+  { level: "Bài 11", hanzi: "唱歌", pinyin: "chànggē", hanviet: "Xướng ca", meaning: "Hát" },
+  { level: "Bài 11", hanzi: "男", pinyin: "nán", hanviet: "Nam", meaning: "Nam" },
+  { level: "Bài 11", hanzi: "女", pinyin: "nǚ", hanviet: "Nữ", meaning: "Nữ" },
+  { level: "Bài 11", hanzi: "孩子", pinyin: "háizi", hanviet: "Hài tử", meaning: "Đứa trẻ" },
+  { level: "Bài 11", hanzi: "右边", pinyin: "yòubian", hanviet: "Hữu biên", meaning: "Bên phải" },
+  { level: "Bài 11", hanzi: "比", pinyin: "bǐ", hanviet: "Tỷ", meaning: "So với" },
+  { level: "Bài 11", hanzi: "便宜", pinyin: "piányi", hanviet: "Tiện nghi", meaning: "Rẻ" },
+  { level: "Bài 11", hanzi: "说话", pinyin: "shuōhuà", hanviet: "Thuyết thoại", meaning: "Nói chuyện" },
+  { level: "Bài 11", hanzi: "可能", pinyin: "kěnéng", hanviet: "Khả năng", meaning: "Có thể" },
+  { level: "Bài 11", hanzi: "去年", pinyin: "qùnián", hanviet: "Khứ niên", meaning: "Năm ngoái" },
+  { level: "Bài 11", hanzi: "姓", pinyin: "xìng", hanviet: "Tính", meaning: "Họ" },
+  { level: "Bài 11", hanzi: "苹果", pinyin: "píngguǒ", hanviet: "Bình quả", meaning: "Quả táo" },
+  { level: "Bài 11", hanzi: "听歌", pinyin: "tīng gē", hanviet: "Thính ca", meaning: "Nghe nhạc" },
+  { level: "Bài 11", hanzi: "女孩儿", pinyin: "nǚháir", hanviet: "Nữ hài nhi", meaning: "Bé gái" },
 
   // Bài 12
-  { lesson: 12, hanzi: '伴', pinyin: 'bàn', meaning: 'Bạn đồng hành' },
-  { lesson: 12, hanzi: '妻子', pinyin: 'qīzi', meaning: 'Vợ' },
-  { lesson: 12, hanzi: '雪', pinyin: 'xuě', meaning: 'Tuyết' },
-  { lesson: 12, hanzi: '零', pinyin: 'líng', meaning: 'Số 0' },
-  { lesson: 12, hanzi: '度', pinyin: 'dù', meaning: 'Độ (đơn vị nhiệt độ)' },
-  { lesson: 12, hanzi: '穿', pinyin: 'chuān', meaning: 'Mặc (quần áo, đi giày)' },
-  { lesson: 12, hanzi: '进', pinyin: 'jìn', meaning: 'Vào, tiến vào' },
-  { lesson: 12, hanzi: '弟弟', pinyin: 'dìdi', meaning: 'Em trai' },
-  { lesson: 12, hanzi: '近', pinyin: 'jìn', meaning: 'Gần' },
-  { lesson: 12, hanzi: '穿衣服', pinyin: 'chuān yīfu', meaning: 'Mặc quần áo' },
-  { lesson: 12, hanzi: '下雪', pinyin: 'xià xuě', meaning: 'Tuyết rơi' },
+  { level: "Bài 12", hanzi: "伴", pinyin: "bàn", hanviet: "Bạn", meaning: "Bạn đồng hành" },
+  { level: "Bài 12", hanzi: "妻子", pinyin: "qīzi", hanviet: "Thê tử", meaning: "Vợ" },
+  { level: "Bài 12", hanzi: "雪", pinyin: "xuě", hanviet: "Tuyết", meaning: "Tuyết" },
+  { level: "Bài 12", hanzi: "零", pinyin: "líng", hanviet: "Linh", meaning: "Số 0" },
+  { level: "Bài 12", hanzi: "度", pinyin: "dù", hanviet: "Độ", meaning: "Độ" },
+  { level: "Bài 12", hanzi: "穿", pinyin: "chuān", hanviet: "Xuyên", meaning: "Mặc" },
+  { level: "Bài 12", hanzi: "进", pinyin: "jìn", hanviet: "Tiến", meaning: "Vào" },
+  { level: "Bài 12", hanzi: "弟弟", pinyin: "dìdi", hanviet: "Đệ đệ", meaning: "Em trai" },
+  { level: "Bài 12", hanzi: "近", pinyin: "jìn", hanviet: "Cận", meaning: "Gần" },
+  { level: "Bài 12", hanzi: "穿衣服", pinyin: "chuān yīfu", hanviet: "Xuyên y phục", meaning: "Mặc quần áo" },
+  { level: "Bài 12", hanzi: "下雪", pinyin: "xià xuě", hanviet: "Hạ tuyết", meaning: "Tuyết rơi" },
 
   // Bài 13
-  { lesson: 13, hanzi: '着', pinyin: 'zhe', meaning: 'Trợ từ động thái (diễn tả trạng thái tiếp diễn)' },
-  { lesson: 13, hanzi: '手', pinyin: 'shǒu', meaning: 'Bàn tay' },
-  { lesson: 13, hanzi: '铅笔', pinyin: 'qiānbǐ', meaning: 'Bút chì' },
-  { lesson: 13, hanzi: '班', pinyin: 'bān', meaning: 'Lớp học, ca làm việc' },
-  { lesson: 13, hanzi: '长', pinyin: 'zhǎng', meaning: 'Lớn lên, mọc, sinh ra' },
-  { lesson: 13, hanzi: '笑', pinyin: 'xiào', meaning: 'Cười' },
-  { lesson: 13, hanzi: '宾馆', pinyin: 'bīnguǎn', meaning: 'Khách sạn' },
-  { lesson: 13, hanzi: '一直', pinyin: 'yìzhí', meaning: 'Thẳng, luôn luôn' },
-  { lesson: 13, hanzi: '往', pinyin: 'wǎng', meaning: 'Hướng về, đi về phía' },
-  { lesson: 13, hanzi: '路口', pinyin: 'lùkǒu', meaning: 'Ngã tư, giao lộ' },
-  { lesson: 13, hanzi: '杨笑笑', pinyin: 'Yáng Xiàoxiao', meaning: 'Dương Tiếu Tiếu (tên riêng)' },
-  { lesson: 13, hanzi: '拿着', pinyin: 'názhe', meaning: 'Đang cầm, đang giữ' },
-  { lesson: 13, hanzi: '前女友', pinyin: 'qián nǚyóu', meaning: 'Bạn gái cũ' },
+  { level: "Bài 13", hanzi: "着", pinyin: "zhe", hanviet: "Trước", meaning: "Trợ từ tiếp diễn" },
+  { level: "Bài 13", hanzi: "手", pinyin: "shǒu", hanviet: "Thủ", meaning: "Bàn tay" },
+  { level: "Bài 13", hanzi: "铅笔", pinyin: "qiānbǐ", hanviet: "Duyên bút", meaning: "Bút chì" },
+  { level: "Bài 13", hanzi: "班", pinyin: "bān", hanviet: "Ban", meaning: "Lớp" },
+  { level: "Bài 13", hanzi: "长", pinyin: "zhǎng", hanviet: "Trưởng", meaning: "Lớn lên" },
+  { level: "Bài 13", hanzi: "笑", pinyin: "xiào", hanviet: "Tiếu", meaning: "Cười" },
+  { level: "Bài 13", hanzi: "宾馆", pinyin: "bīnguǎn", hanviet: "Tân quán", meaning: "Khách sạn" },
+  { level: "Bài 13", hanzi: "一直", pinyin: "yìzhí", hanviet: "Nhất trực", meaning: "Luôn luôn" },
+  { level: "Bài 13", hanzi: "往", pinyin: "wǎng", hanviet: "Vãng", meaning: "Hướng về" },
+  { level: "Bài 13", hanzi: "路口", pinyin: "lùkǒu", hanviet: "Lộ khẩu", meaning: "Ngã tư" },
+  { level: "Bài 13", hanzi: "杨笑笑", pinyin: "Yáng Xiàoxiao", hanviet: "Dương Tiếu Tiếu", meaning: "Tên riêng" },
+  { level: "Bài 13", hanzi: "拿着", pinyin: "názhe", hanviet: "Nã trước", meaning: "Đang cầm" },
+  { level: "Bài 13", hanzi: "前女友", pinyin: "qián nǚyóu", hanviet: "Tiền nữ hữu", meaning: "Bạn gái cũ" },
 
   // Bài 14
-  { lesson: 14, hanzi: '意思', pinyin: 'yìsi', meaning: 'Ý nghĩa' },
-  { lesson: 14, hanzi: '但是', pinyin: 'dànshì', meaning: 'Nhưng, thế nhưng' },
-  { lesson: 14, hanzi: '虽然', pinyin: 'suīrán', meaning: 'Mặc dù, tuy rằng' },
-  { lesson: 14, hanzi: '次', pinyin: 'cì', meaning: 'Lần (bổ ngữ tần suất)' },
-  { lesson: 14, hanzi: '玩儿', pinyin: 'wánr', meaning: 'Chơi' },
-  { lesson: 14, hanzi: '晴', pinyin: 'qíng', meaning: 'Nắng, trời quang' },
-  { lesson: 14, hanzi: '百', pinyin: 'bǎi', meaning: 'Trăm' },
-  { lesson: 14, hanzi: '电影', pinyin: 'diànyǐng', meaning: 'Phim điện ảnh' },
-  { lesson: 14, hanzi: '游过', pinyin: 'yóuguò', meaning: 'Đã từng bơi' },
+  { level: "Bài 14", hanzi: "意思", pinyin: "yìsi", hanviet: "Ý tư", meaning: "Ý nghĩa" },
+  { level: "Bài 14", hanzi: "但是", pinyin: "dànshì", hanviet: "Đãn thị", meaning: "Nhưng" },
+  { level: "Bài 14", hanzi: "虽然", pinyin: "suīrán", hanviet: "Tuy nhiên", meaning: "Mặc dù" },
+  { level: "Bài 14", hanzi: "次", pinyin: "cì", hanviet: "Thứ", meaning: "Lần" },
+  { level: "Bài 14", hanzi: "玩儿", pinyin: "wánr", hanviet: "Ngoạn nhi", meaning: "Chơi" },
+  { level: "Bài 14", hanzi: "晴", pinyin: "qíng", hanviet: "Tình", meaning: "Nắng" },
+  { level: "Bài 14", hanzi: "百", pinyin: "bǎi", hanviet: "Bách", meaning: "Trăm" },
+  { level: "Bài 14", hanzi: "电影", pinyin: "diànyǐng", hanviet: "Điện ảnh", meaning: "Phim" },
+  { level: "Bài 14", hanzi: "游过", pinyin: "yóuguò", hanviet: "Du quá", meaning: "Đã từng bơi" },
 
   // Bài 15
-  { lesson: 15, hanzi: '日', pinyin: 'rì', meaning: 'Ngày, mặt trời' },
-  { lesson: 15, hanzi: '新年', pinyin: 'xīnnián', meaning: 'Năm mới, Tết' },
-  { lesson: 15, hanzi: '票', pinyin: 'piào', meaning: 'Vé' },
-  { lesson: 15, hanzi: '火车站', pinyin: 'huǒchēzhàn', meaning: 'Ga tàu hỏa' },
-  { lesson: 15, hanzi: '大家', pinyin: 'dàjiā', meaning: 'Mọi người' },
-  { lesson: 15, hanzi: '更', pinyin: 'gèng', meaning: 'Càng, hơn nữa' },
-  { lesson: 15, hanzi: '妹妹', pinyin: 'mèimei', meaning: 'Em gái' },
-  { lesson: 15, hanzi: '阴', pinyin: 'yīn', meaning: 'Âm u, nhiều mây' },
-  { lesson: 15, hanzi: '火车', pinyin: 'huǒchē', meaning: 'Tàu hỏa' },
-  { lesson: 15, hanzi: '汽车', pinyin: 'qìchē', meaning: 'Xe ô tô' },
-  { lesson: 15, hanzi: '旅馆', pinyin: 'lǚguǎn', meaning: 'Nhà trọ, khách sạn' }
+  { level: "Bài 15", hanzi: "日", pinyin: "rì", hanviet: "Nhật", meaning: "Ngày" },
+  { level: "Bài 15", hanzi: "新年", pinyin: "xīnnián", hanviet: "Tân niên", meaning: "Năm mới" },
+  { level: "Bài 15", hanzi: "票", pinyin: "piào", hanviet: "Phiếu", meaning: "Vé" },
+  { level: "Bài 15", hanzi: "火车站", pinyin: "huǒchēzhàn", hanviet: "Hỏa xa trạm", meaning: "Ga tàu hỏa" },
+  { level: "Bài 15", hanzi: "大家", pinyin: "dàjiā", hanviet: "Đại gia", meaning: "Mọi người" },
+  { level: "Bài 15", hanzi: "更", pinyin: "gèng", hanviet: "Cánh", meaning: "Càng" },
+  { level: "Bài 15", hanzi: "妹妹", pinyin: "mèimei", hanviet: "Muội muội", meaning: "Em gái" },
+  { level: "Bài 15", hanzi: "阴", pinyin: "yīn", hanviet: "Âm", meaning: "Âm u" },
+  { level: "Bài 15", hanzi: "火车", pinyin: "huǒchē", hanviet: "Hỏa xa", meaning: "Tàu hỏa" },
+  { level: "Bài 15", hanzi: "汽车", pinyin: "qìchē", hanviet: "Khí xa", meaning: "Ô tô" },
+  { level: "Bài 15", hanzi: "旅馆", pinyin: "lǚguǎn", hanviet: "Lữ quán", meaning: "Nhà trọ" }
 ];
 
 // ==================== BIẾN TOÀN CỤC ====================
@@ -547,8 +745,19 @@ let answered = false;
 let autoNextTimer = null;
 let currentLesson = 'all';
 let speechRate = 0.85;
+let isTimerEnabled = false;
+let timerInterval = null;
+let currentMaxTime = 0;
+let timeLeft = 0;
 
-// ==================== HÀM PHÁT ÂM ====================
+let fcWords = [];
+let fcIndex = 0;
+let fcAutoSpeak = true;
+let isFlipped = false;
+
+let writer = null;
+
+// ==================== PHÁT ÂM ====================
 function speakText(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel(); 
@@ -556,20 +765,16 @@ function speakText(text) {
     utterance.lang = 'zh-CN'; 
     utterance.rate = speechRate; 
     window.speechSynthesis.speak(utterance);
-  } else {
-    alert('Trình duyệt của bạn không hỗ trợ phát âm thanh.');
   }
 }
 
 function speakCurrentWord() {
   if (currentWord && currentWord.hanzi) {
+    if (isTimerEnabled && !answered) clearInterval(timerInterval);
     speakText(currentWord.hanzi);
-  }
-}
-
-function speakWordByIndex(index) {
-  if (words[index] && words[index].hanzi) {
-    speakText(words[index].hanzi);
+    if (isTimerEnabled && !answered) {
+      setTimeout(() => { if (!answered) startTimer(currentMaxTime, timeLeft); }, 2000);
+    }
   }
 }
 
@@ -579,77 +784,136 @@ function updateSpeedLabel() {
   speechRate = parseFloat(val);
 }
 
-function saveSpeed() {
-  localStorage.setItem('zh_speed_v6', speechRate);
+function saveSpeed() { localStorage.setItem('zh_speed_v13_2', speechRate); }
+
+// ==================== LOGIC ĐẾM NGƯỢC ====================
+function toggleTimer() {
+  isTimerEnabled = document.getElementById('timerToggle').checked;
+  localStorage.setItem('zh_timer_v13_2', isTimerEnabled ? '1' : '0');
+  if (currentWord) nextQuestion();
+}
+
+function startTimer(maxTime, fromTime) {
+  clearInterval(timerInterval);
+  currentMaxTime = maxTime;
+  timeLeft = fromTime;
+  const timerContainer = document.getElementById('timerContainer');
+  const timerBar = document.getElementById('timerBar');
+  if (!isTimerEnabled) { timerContainer.style.display = 'none'; return; }
+  timerContainer.style.display = 'block';
+  timerBar.style.width = (timeLeft / maxTime * 100) + '%';
+  timerBar.className = 'timer-bar';
+
+  timerInterval = setInterval(() => {
+    timeLeft -= 0.1;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timeLeft = 0;
+      timerBar.style.width = '0%';
+      handleTimeout();
+    } else {
+      timerBar.style.width = (timeLeft / maxTime * 100) + '%';
+      if (timeLeft / maxTime < 0.25) timerBar.className = 'timer-bar danger';
+      else if (timeLeft / maxTime < 0.6) timerBar.className = 'timer-bar warning';
+    }
+  }, 100);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('timerBar').style.width = '0%';
+}
+
+function handleTimeout() {
+  if (answered) return;
+  answered = true;
+  total++;
+  wrong++;
+  updateStats();
+  addToWrongPool();
+  let correctAns = '';
+  const effectiveMode = currentMode === 'wrong' ? 'hanzi' : currentMode;
+  if (typeMode === 'hanzi') correctAns = currentWord.hanzi;
+  else if (typeMode === 'pinyin') correctAns = currentWord.pinyin;
+  else if (effectiveMode === 'hanzi') correctAns = currentWord.hanzi;
+  else if (effectiveMode === 'pinyin') correctAns = currentWord.pinyin;
+  else correctAns = currentWord.meaning;
+
+  document.getElementById('answerReveal').textContent = '⏰ Hết giờ! Đáp án: ' + correctAns;
+  document.querySelectorAll('#optionsBox button').forEach(b => {
+    if (b.textContent === correctAns) b.classList.add('correct');
+    b.disabled = true;
+  });
+  const input = document.getElementById('typeInput');
+  if (input) { input.disabled = true; input.classList.add('wrong'); }
+  setNextButtonEnabled(true);
 }
 
 // ==================== KHỞI TẠO ====================
 function loadFromStorage() {
-  // Tải tốc độ đọc
-  const savedSpeed = localStorage.getItem('zh_speed_v6');
-  if (savedSpeed) {
-    speechRate = parseFloat(savedSpeed);
-    document.getElementById('speedRange').value = speechRate;
-    updateSpeedLabel();
-  }
-
-  const saved = localStorage.getItem('zh_words_v6');
-  if (saved) {
-    try { words = JSON.parse(saved); } catch(e) { words = []; }
-  }
+  const savedSpeed = localStorage.getItem('zh_speed_v13_2');
+  if (savedSpeed) { speechRate = parseFloat(savedSpeed); document.getElementById('speedRange').value = speechRate; updateSpeedLabel(); }
+  const savedTimer = localStorage.getItem('zh_timer_v13_2');
+  if (savedTimer === '1') { isTimerEnabled = true; document.getElementById('timerToggle').checked = true; }
+  const saved = localStorage.getItem('zh_words_v13_2');
+  if (saved) { try { words = JSON.parse(saved); } catch(e) { words = []; } }
   if (words.length === 0 && defaultWords.length > 0) {
-    words = defaultWords.slice();
-    localStorage.setItem('zh_words_v6', JSON.stringify(words));
+    const unique = [];
+    const map = new Set();
+    for (const item of defaultWords) {
+      const key = item.hanzi + '|' + item.pinyin;
+      if (!map.has(key)) { map.add(key); unique.push(item); }
+    }
+    words = unique;
+    localStorage.setItem('zh_words_v13_2', JSON.stringify(words));
   }
-  const savedWrong = localStorage.getItem('zh_wrong_v6');
+  const savedWrong = localStorage.getItem('zh_wrong_v13_2');
   if (savedWrong) { try { wrongPool = JSON.parse(savedWrong); } catch(e) { wrongPool = []; } }
-  
-  const savedTypeMode = localStorage.getItem('zh_typemode_v6');
+  const savedTypeMode = localStorage.getItem('zh_typemode_v13_2');
   if (savedTypeMode === 'hanzi' || savedTypeMode === 'pinyin') typeMode = savedTypeMode;
-  
-  const savedLesson = localStorage.getItem('zh_lesson_v6');
+  const savedLesson = localStorage.getItem('zh_lesson_v13_2');
   if (savedLesson) {
     currentLesson = savedLesson;
     document.getElementById('lessonSelect').value = currentLesson;
+    document.getElementById('fcLessonSelect').value = currentLesson;
   }
-
   updateToggleButtons();
   updateUI();
 }
 
 function saveAll() {
-  localStorage.setItem('zh_words_v6', JSON.stringify(words));
-  localStorage.setItem('zh_wrong_v6', JSON.stringify(wrongPool));
+  localStorage.setItem('zh_words_v13_2', JSON.stringify(words));
+  localStorage.setItem('zh_wrong_v13_2', JSON.stringify(wrongPool));
 }
 
 function changeLesson() {
   currentLesson = document.getElementById('lessonSelect').value;
-  localStorage.setItem('zh_lesson_v6', currentLesson);
-  updateUI();
-  nextQuestion();
+  document.getElementById('fcLessonSelect').value = currentLesson;
+  localStorage.setItem('zh_lesson_v13_2', currentLesson);
+  updateUI(); nextQuestion(); initFlashcards();
 }
 
-// ==================== NẠP TỪ TEXT ====================
+function changeFcLesson() {
+  currentLesson = document.getElementById('fcLessonSelect').value;
+  document.getElementById('lessonSelect').value = currentLesson;
+  localStorage.setItem('zh_lesson_v13_2', currentLesson);
+  updateUI(); initFlashcards();
+}
+
 function loadWords(appendMode) {
   const text = document.getElementById('inputArea').value.trim();
-  if (!text) { alert('Vui lòng nhập list từ vào ô text!'); return; }
+  if (!text) { alert('Vui lòng nhập list từ!'); return; }
   const lines = text.split('\n').filter(l => l.trim());
   const newWords = [];
   for (const line of lines) {
-    let parts;
-    if (line.includes('\t')) parts = line.split('\t');
-    else if (line.includes('|')) parts = line.split('|');
-    else parts = line.split(',');
+    let parts = line.split(/[|,\t]/);
     parts = parts.map(p => p.trim()).filter(p => p);
-    if (parts.length >= 3) {
-      newWords.push({ lesson: 0, hanzi: parts[0], pinyin: parts[1], meaning: parts[2] });
-    }
+    if (parts.length >= 3) newWords.push({ level: 'Tự nhập', hanzi: parts[0], pinyin: parts[1], hanviet: '', meaning: parts[2] });
   }
-  if (newWords.length === 0) { alert('Không đọc được từ nào. Kiểm tra định dạng: Hán tự | Pinyin | Nghĩa'); return; }
-  applyNewWords(newWords, appendMode, 'text');
+  if (newWords.length === 0) { alert('Định dạng sai.'); return; }
+  applyNewWords(newWords, appendMode);
 }
 
-// ==================== NẠP EXCEL ====================
 function loadExcel(event, appendMode) {
   const file = event.target.files[0];
   if (!file) return;
@@ -658,202 +922,168 @@ function loadExcel(event, appendMode) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '' });
       let startIdx = 0;
-      if (rows.length && /hán|hanzi|pinyin|nghĩa|meaning/i.test(String(rows[0][0] || ''))) startIdx = 1;
+      if (rows.length && /level|cấp|hán|hanzi|pinyin/i.test(String(rows[0][0] || ''))) startIdx = 1;
       const newWords = [];
       for (let i = startIdx; i < rows.length; i++) {
         const r = rows[i];
         if (!r || !r[0]) continue;
-        const hanzi = String(r[0]).trim();
-        const pinyin = String(r[1] || '').trim();
-        const meaning = String(r[2] || '').trim();
-        if (hanzi && pinyin && meaning) {
-           newWords.push({ lesson: 0, hanzi, pinyin, meaning });
+        let level = 'Tự nhập', hanzi = '', pinyin = '', hanviet = '', meaning = '';
+        if (String(r[0]).startsWith('HSK') || String(r[0]).startsWith('Bài')) {
+          level = String(r[0]).trim(); hanzi = String(r[1]||'').trim(); pinyin = String(r[2]||'').trim(); hanviet = String(r[3]||'').trim(); meaning = String(r[4]||'').trim();
+        } else {
+          hanzi = String(r[0]).trim(); pinyin = String(r[1]||'').trim(); meaning = String(r[2]||'').trim();
         }
+        if (hanzi && pinyin && meaning) newWords.push({ level, hanzi, pinyin, hanviet, meaning });
       }
-      if (newWords.length === 0) { alert('Không đọc được dữ liệu. Đảm bảo file có 3 cột: Hán tự | Pinyin | Nghĩa'); return; }
-      applyNewWords(newWords, appendMode, 'Excel');
+      if (newWords.length === 0) { alert('Không đọc được dữ liệu.'); return; }
+      applyNewWords(newWords, appendMode);
       event.target.value = '';
-    } catch (err) {
-      alert('Lỗi đọc file: ' + err.message);
-    }
+    } catch (err) { alert('Lỗi đọc file: ' + err.message); }
   };
   reader.readAsArrayBuffer(file);
 }
 
-function applyNewWords(newWords, appendMode, source) {
+function applyNewWords(newWords, appendMode) {
   if (appendMode) {
     const existing = new Set(words.map(w => w.hanzi + '|' + w.pinyin));
-    let added = 0, skipped = 0;
+    let added = 0;
     for (const w of newWords) {
       const key = w.hanzi + '|' + w.pinyin;
-      if (existing.has(key)) { skipped++; continue; }
-      words.push(w);
-      existing.add(key);
-      added++;
+      if (!existing.has(key)) { words.push(w); existing.add(key); added++; }
     }
-    saveAll();
-    updateUI();
-    alert('✅ Đã thêm ' + added + ' từ từ ' + source + '.' + (skipped ? '\nBỏ qua ' + skipped + ' từ trùng.' : ''));
+    alert('✅ Đã thêm ' + added + ' từ.');
   } else {
-    if (!confirm('Thay thế toàn bộ list hiện tại (' + words.length + ' từ) bằng ' + newWords.length + ' từ mới?')) return;
+    if (!confirm('Thay thế toàn bộ list hiện tại?')) return;
     words = newWords;
-    saveAll();
-    updateUI();
     alert('✅ Đã thay thế bằng ' + words.length + ' từ!');
   }
-  showTab('quiz');
+  saveAll(); updateUI(); showTab('quiz');
 }
 
 function clearWords() {
-  if (confirm('Xóa hết list từ? (Có thể khôi phục list mặc định sau)')) {
-    words = [];
-    saveAll();
-    updateUI();
-  }
+  if (confirm('Xóa hết list từ?')) { words = []; saveAll(); updateUI(); }
 }
 
 function restoreDefaults() {
-  if (!confirm('Khôi phục list mặc định? List hiện tại sẽ bị thay thế.')) return;
-  words = defaultWords.slice();
-  saveAll();
-  updateUI();
-  alert('↩️ Đã khôi phục ' + words.length + ' từ mặc định.');
+  if (!confirm('Khôi phục list mặc định?')) return;
+  words = defaultWords.slice(); saveAll(); updateUI();
 }
 
 // ==================== CẬP NHẬT UI ====================
+function getFilteredPool() {
+  if (currentLesson === 'all') return words;
+  return words.filter(w => w.level === currentLesson);
+}
+
 function updateUI() {
-  document.getElementById('countInfo').textContent = words.length ? '(' + words.length + ' từ)' : '';
+  const countInfoEl = document.getElementById('countInfo');
+  if (countInfoEl) countInfoEl.textContent = words.length ? '(' + words.length + ' từ)' : '';
   document.getElementById('listCount').textContent = words.length;
   
   document.getElementById('wordTable').innerHTML = words.map((w, index) =>
-    '<tr>' +
-    '<td>' + (w.lesson === 0 ? 'Tự nhập' : (w.lesson ? 'Bài ' + w.lesson : '-')) + '</td>' +
-    '<td style="font-size:22px;">' + w.hanzi + '</td>' +
-    '<td>' + w.pinyin + '</td>' +
-    '<td>' + w.meaning + '</td>' +
-    '<td><button class="btn-speak btn-speak-table" onclick="speakWordByIndex(' + index + ')" title="Nghe">🔊</button></td>' +
-    '</tr>'
+    '<tr><td>' + w.level + '</td><td style="font-size:22px;">' + w.hanzi + '</td><td>' + w.pinyin + '</td><td>' + (w.hanviet || '-') + '</td><td>' + w.meaning + '</td><td><button onclick="speakWordByIndex(' + index + ')" style="background:none; border:none; cursor:pointer; font-size:16px;">🔊</button></td></tr>'
   ).join('');
   
+  refreshLessonDropdowns();
+  refreshWriteLevelOptions();
+
   document.getElementById('wrongPoolCount').textContent = wrongPool.length;
   
   const pool = getFilteredPool();
   const lessonCountEl = document.getElementById('lessonCount');
   if (currentLesson === 'all') lessonCountEl.textContent = '(Tổng: ' + pool.length + ' từ)';
-  else lessonCountEl.textContent = '(Có: ' + pool.length + ' từ)';
+  else lessonCountEl.textContent = '(' + pool.length + ' từ)';
 
   if (words.length > 0 && !currentWord) nextQuestion();
 }
 
-function getFilteredPool() {
-  if (currentLesson === 'all') return words;
-  return words.filter(w => String(w.lesson) === String(currentLesson));
+function refreshLessonDropdowns() {
+  const sel1 = document.getElementById('lessonSelect');
+  const sel2 = document.getElementById('fcLessonSelect');
+  const levels = Array.from(new Set(words.map(w => w.level))).filter(l => l);
+  levels.sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+
+  let html = '<option value="all">Tất cả các bài (' + words.length + ')</option>';
+  levels.forEach(l => {
+    const count = words.filter(w => w.level === l).length;
+    html += '<option value="' + l + '">' + l + ' (' + count + ')</option>';
+  });
+
+  if (sel1) { sel1.innerHTML = html; sel1.value = currentLesson; if (!sel1.value) currentLesson = 'all'; sel1.value = currentLesson; }
+  if (sel2) { sel2.innerHTML = html; sel2.value = currentLesson; }
 }
 
-// ==================== TAB ====================
+function speakWordByIndex(index) {
+  if (words[index] && words[index].hanzi) {
+    speakText(words[index].hanzi);
+  }
+}
+
 function showTab(name) {
-  ['input','quiz','list'].forEach(t => {
+  ['input','quiz','flashcard','write','list'].forEach(t => {
     document.getElementById('tab-' + t).classList.add('hidden');
   });
   document.getElementById('tab-' + name).classList.remove('hidden');
+  
   if (name === 'quiz' && !currentWord && words.length) nextQuestion();
+  if (name === 'flashcard') initFlashcards();
+  if (name === 'write') enterWriteTab();
 }
 
 // ==================== CHẾ ĐỘ HỌC ====================
 function setMode(mode) {
   currentMode = mode;
   typeMode = null;
-  localStorage.setItem('zh_typemode_v6', '');
+  localStorage.setItem('zh_typemode_v13_2', '');
   updateToggleButtons();
-  document.querySelectorAll('.tabs button').forEach(b => {
-    b.classList.toggle('active', b.dataset.mode === mode);
-  });
+  document.querySelectorAll('.tabs button').forEach(b => { b.classList.toggle('active', b.dataset.mode === mode); });
   nextQuestion();
 }
 
 function toggleType(kind) {
-  if (typeMode === kind) {
-    typeMode = null;
-    localStorage.setItem('zh_typemode_v6', '');
-  } else {
-    typeMode = kind;
-    localStorage.setItem('zh_typemode_v6', kind);
-  }
-  updateToggleButtons();
-  document.getElementById('optionsBox').innerHTML = '';
-  document.getElementById('answerReveal').textContent = '';
-  nextQuestion();
+  if (typeMode === kind) { typeMode = null; localStorage.setItem('zh_typemode_v13_2', ''); }
+  else { typeMode = kind; localStorage.setItem('zh_typemode_v13_2', kind); }
+  updateToggleButtons(); document.getElementById('optionsBox').innerHTML = ''; document.getElementById('answerReveal').textContent = ''; nextQuestion();
 }
 
 function updateToggleButtons() {
   const btnH = document.getElementById('typeHanziBtn');
   const btnP = document.getElementById('typePinyinBtn');
-  btnH.classList.toggle('on', typeMode === 'hanzi');
-  btnP.classList.toggle('on', typeMode === 'pinyin');
-  btnH.textContent = typeMode === 'hanzi'
-    ? '⌨️ Đang gõ Hán tự (hiện Nghĩa) — bấm để tắt'
-    : '⌨️ Gõ Hán tự (hiện Nghĩa)';
-  btnP.textContent = typeMode === 'pinyin'
-    ? '⌨️ Đang gõ Pinyin (hiện Hán tự + Nghĩa) — bấm để tắt'
-    : '⌨️ Gõ Pinyin (hiện Hán tự + Nghĩa)';
+  btnH.classList.toggle('on', typeMode === 'hanzi'); btnP.classList.toggle('on', typeMode === 'pinyin');
+  btnH.textContent = typeMode === 'hanzi' ? '⌨️ Đang gõ Hán tự (hiện Nghĩa) — bấm để tắt' : '⌨️ Gõ Hán tự (hiện Nghĩa)';
+  btnP.textContent = typeMode === 'pinyin' ? '⌨️ Đang gõ Pinyin (hiện Hán tự + Nghĩa) — bấm để tắt' : '⌨️ Gõ Pinyin (hiện Hán tự + Nghĩa)';
 }
 
 function normalize(str, mode) {
   let s = String(str).trim();
-  if (mode === 'pinyin') {
-    s = s.toLowerCase().replace(/\s+/g, '');
-    s = removeTones(s);
-  } else if (mode === 'meaning') {
-    s = s.toLowerCase().replace(/\s+/g, ' ').trim();
-  } else {
-    s = s.replace(/\s+/g, '');
-  }
+  if (mode === 'pinyin') s = s.replace(/\s+/g, ''); // Bắt buộc dấu
+  else if (mode === 'meaning') s = s.toLowerCase().replace(/\s+/g, ' ').trim();
+  else s = s.replace(/\s+/g, '');
   return s;
 }
 
-function removeTones(s) {
-  const map = {
-    'ā':'a','á':'a','ǎ':'a','à':'a','ē':'e','é':'e','ě':'e','è':'e',
-    'ī':'i','í':'i','ǐ':'i','ì':'i','ō':'o','ó':'o','ǒ':'o','ò':'o',
-    'ū':'u','ú':'u','ǔ':'u','ù':'u','ǖ':'v','ǘ':'v','ǚ':'v','ǜ':'v',
-    'ü':'v'
-  };
-  return s.replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/g, ch => map[ch] || ch);
-}
-
-function setNextButtonEnabled(enabled) {
-  document.getElementById('nextBtn').classList.toggle('highlight', enabled);
-}
-
-function cancelAutoNext() {
-  if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
-}
+function setNextButtonEnabled(enabled) { document.getElementById('nextBtn').classList.toggle('highlight', enabled); }
+function cancelAutoNext() { if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; } }
 
 // ==================== TẠO CÂU HỎI ====================
 function nextQuestion() {
-  cancelAutoNext();
-  setNextButtonEnabled(false);
-  
+  cancelAutoNext(); stopTimer(); setNextButtonEnabled(false);
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
   let pool = getFilteredPool();
-  
   if (currentMode === 'wrong' && !typeMode) {
-    const filteredWrongPool = wrongPool.filter(w => {
-      if (currentLesson === 'all') return true;
-      return String(w.lesson) === String(currentLesson);
-    });
-
+    const filteredWrongPool = wrongPool.filter(w => currentLesson === 'all' || w.level === currentLesson);
     if (filteredWrongPool.length === 0) {
       document.getElementById('promptText').textContent = '🎉 Không có từ sai!';
-      document.getElementById('subText').textContent = 'Hãy học thêm để tạo danh sách từ sai.';
-      document.getElementById('optionsBox').innerHTML = '';
-      document.getElementById('optionsBox').classList.add('hidden');
-      document.getElementById('typeBox').classList.add('hidden');
-      document.getElementById('answerReveal').textContent = '';
+      document.getElementById('subText').textContent = '';
+      document.getElementById('optionsBox').innerHTML = ''; document.getElementById('optionsBox').classList.add('hidden');
+      document.getElementById('typeBox').classList.add('hidden'); document.getElementById('answerReveal').textContent = '';
       document.getElementById('speakBtn').classList.add('hidden');
       return;
     }
@@ -861,79 +1091,45 @@ function nextQuestion() {
   }
 
   if (pool.length === 0) {
-    document.getElementById('promptText').textContent = 'Chưa có từ nào trong bộ này';
-    document.getElementById('subText').textContent = 'Hãy chọn bộ khác hoặc thêm từ vựng.';
-    document.getElementById('optionsBox').innerHTML = '';
-    document.getElementById('optionsBox').classList.add('hidden');
-    document.getElementById('typeBox').classList.add('hidden');
-    document.getElementById('answerReveal').textContent = '';
+    document.getElementById('promptText').textContent = 'Chưa có từ nào';
+    document.getElementById('subText').textContent = '';
+    document.getElementById('optionsBox').innerHTML = ''; document.getElementById('optionsBox').classList.add('hidden');
+    document.getElementById('typeBox').classList.add('hidden'); document.getElementById('answerReveal').textContent = '';
     document.getElementById('speakBtn').classList.add('hidden');
     return;
   }
 
   answered = false;
   currentWord = pool[Math.floor(Math.random() * pool.length)];
-
-  const promptEl = document.getElementById('promptText');
-  const subEl = document.getElementById('subText');
-  const speakBtn = document.getElementById('speakBtn');
+  const promptEl = document.getElementById('promptText'); const subEl = document.getElementById('subText'); const speakBtn = document.getElementById('speakBtn');
   document.getElementById('answerReveal').textContent = '';
-
-  const optionsBox = document.getElementById('optionsBox');
-  const typeBox = document.getElementById('typeBox');
-  const input = document.getElementById('typeInput');
-
+  const optionsBox = document.getElementById('optionsBox'); const typeBox = document.getElementById('typeBox'); const input = document.getElementById('typeInput');
   speakBtn.classList.remove('hidden');
 
   if (typeMode === 'hanzi') {
-    promptEl.textContent = currentWord.meaning;
-    subEl.textContent = '';
-    optionsBox.innerHTML = '';
-    optionsBox.classList.add('hidden');
-    typeBox.classList.remove('hidden');
-    input.value = '';
-    input.classList.remove('correct', 'wrong');
-    input.disabled = false;
-    setTimeout(() => input.focus(), 50);
-    return;
+    promptEl.textContent = currentWord.meaning; subEl.textContent = '';
+    optionsBox.innerHTML = ''; optionsBox.classList.add('hidden'); typeBox.classList.remove('hidden');
+    input.value = ''; input.classList.remove('correct', 'wrong'); input.disabled = false;
+    setTimeout(() => input.focus(), 50); startTimer(20, 20); return;
   }
 
   if (typeMode === 'pinyin') {
-    promptEl.textContent = currentWord.hanzi;
-    subEl.textContent = currentWord.meaning;
-    optionsBox.innerHTML = '';
-    optionsBox.classList.add('hidden');
-    typeBox.classList.remove('hidden');
-    input.value = '';
-    input.classList.remove('correct', 'wrong');
-    input.disabled = false;
-    setTimeout(() => input.focus(), 50);
-    return;
+    promptEl.textContent = currentWord.hanzi; subEl.textContent = currentWord.meaning;
+    optionsBox.innerHTML = ''; optionsBox.classList.add('hidden'); typeBox.classList.remove('hidden');
+    input.value = ''; input.classList.remove('correct', 'wrong'); input.disabled = false;
+    setTimeout(() => input.focus(), 50); startTimer(20, 20); return;
   }
 
-  typeBox.classList.add('hidden');
-  input.value = '';
-  input.classList.remove('correct', 'wrong');
-
+  typeBox.classList.add('hidden'); input.value = ''; input.classList.remove('correct', 'wrong');
   const effectiveMode = currentMode === 'wrong' ? 'hanzi' : currentMode;
 
-  if (effectiveMode === 'hanzi') {
-    promptEl.textContent = currentWord.pinyin;
-    subEl.textContent = currentWord.meaning;
-  } else if (effectiveMode === 'pinyin') {
-    promptEl.textContent = currentWord.hanzi;
-    subEl.textContent = currentWord.meaning;
-  } else {
-    promptEl.textContent = currentWord.hanzi;
-    subEl.textContent = currentWord.pinyin;
-  }
+  if (effectiveMode === 'hanzi') { promptEl.textContent = currentWord.pinyin; subEl.textContent = currentWord.meaning; }
+  else if (effectiveMode === 'pinyin') { promptEl.textContent = currentWord.hanzi; subEl.textContent = currentWord.meaning; }
+  else { promptEl.textContent = currentWord.hanzi; subEl.textContent = currentWord.pinyin; }
 
   const key = effectiveMode === 'hanzi' ? 'hanzi' : effectiveMode === 'pinyin' ? 'pinyin' : 'meaning';
   const correctAns = currentWord[key];
-
-  optionsBox.classList.remove('hidden');
-  optionsBox.innerHTML = '';
-
+  optionsBox.classList.remove('hidden'); optionsBox.innerHTML = '';
   const poolAll = words.filter(w => w[key] !== correctAns);
   const shuffled = poolAll.sort(() => Math.random() - 0.5).slice(0, 3);
   const options = [correctAns, ...shuffled.map(w => w[key])].sort(() => Math.random() - 0.5);
@@ -944,99 +1140,546 @@ function nextQuestion() {
     btn.onclick = () => checkAnswer(btn, opt, correctAns);
     optionsBox.appendChild(btn);
   });
+  startTimer(10, 10);
 }
 
 // ==================== KIỂM TRA TRẮC NGHIỆM ====================
 function checkAnswer(btn, chosen, correctAns) {
   if (answered) return;
-  answered = true;
-  total++;
-
+  answered = true; total++; stopTimer();
   const allBtns = document.querySelectorAll('#optionsBox button');
-  allBtns.forEach(b => {
-    if (b.textContent === correctAns) b.classList.add('correct');
-  });
-
+  allBtns.forEach(b => { b.disabled = true; if (b.textContent === correctAns) b.classList.add('correct'); });
   if (chosen === correctAns) {
-    correct++;
-    updateStats();
-    autoNextTimer = setTimeout(() => nextQuestion(), 800);
+    correct++; updateStats(); autoNextTimer = setTimeout(() => nextQuestion(), 800);
   } else {
-    wrong++;
-    btn.classList.add('wrong');
-    addToWrongPool();
-    updateStats();
-    setNextButtonEnabled(true);
+    wrong++; btn.classList.add('wrong'); addToWrongPool(); updateStats(); setNextButtonEnabled(true);
   }
 }
 
 // ==================== KIỂM TRA GÕ ĐÁP ÁN ====================
 function checkTyped() {
   if (answered) return;
-  const input = document.getElementById('typeInput');
-  const userAns = input.value;
+  const input = document.getElementById('typeInput'); const userAns = input.value;
   if (!userAns.trim()) return;
-
   let key, correctAns;
-  if (typeMode === 'hanzi') {
-    key = 'hanzi';
-    correctAns = currentWord.hanzi;
-  } else if (typeMode === 'pinyin') {
-    key = 'pinyin';
-    correctAns = currentWord.pinyin;
-  } else {
-    return;
-  }
+  if (typeMode === 'hanzi') { key = 'hanzi'; correctAns = currentWord.hanzi; }
+  else if (typeMode === 'pinyin') { key = 'pinyin'; correctAns = currentWord.pinyin; }
+  else return;
 
-  answered = true;
-  total++;
-
+  answered = true; total++; stopTimer();
   const isCorrect = normalize(userAns, key) === normalize(correctAns, key);
-
   input.disabled = true;
   if (isCorrect) {
-    correct++;
-    input.classList.add('correct');
-    document.getElementById('answerReveal').textContent = '✅ Chính xác!';
-    updateStats();
+    correct++; input.classList.add('correct'); document.getElementById('answerReveal').textContent = '✅ Chính xác!'; updateStats();
     autoNextTimer = setTimeout(() => nextQuestion(), 800);
   } else {
-    wrong++;
-    input.classList.add('wrong');
-    document.getElementById('answerReveal').textContent = '❌ Sai. Đáp án đúng: ' + correctAns;
-    addToWrongPool();
-    updateStats();
-    setNextButtonEnabled(true);
+    wrong++; input.classList.add('wrong'); document.getElementById('answerReveal').textContent = '❌ Sai. Đáp án đúng: ' + correctAns;
+    addToWrongPool(); updateStats(); setNextButtonEnabled(true);
+  }
+}
+
+// ==================== LOGIC FLASHCARD ====================
+function initFlashcards() {
+  fcWords = getFilteredPool(); fcIndex = 0; isFlipped = false;
+  document.getElementById('flashcardContainer').classList.remove('flipped'); updateFlashcardUI();
+}
+
+function updateFlashcardUI() {
+  if (fcWords.length === 0) {
+    document.getElementById('fcFrontHanzi').textContent = 'Trống'; document.getElementById('fcProgress').textContent = 'Thẻ 0 / 0'; return;
+  }
+  if (fcIndex >= fcWords.length) fcIndex = 0; if (fcIndex < 0) fcIndex = fcWords.length - 1;
+  const w = fcWords[fcIndex];
+  document.getElementById('fcFrontHanzi').textContent = w.hanzi;
+  document.getElementById('fcFrontHanviet').textContent = w.hanviet || '';
+  document.getElementById('fcBackPinyin').textContent = w.pinyin;
+  document.getElementById('fcBackMeaning').textContent = w.meaning;
+  document.getElementById('fcProgress').textContent = `Thẻ ${fcIndex + 1} / ${fcWords.length}`;
+  if (isFlipped) document.getElementById('flashcardContainer').classList.add('flipped');
+  else { document.getElementById('flashcardContainer').classList.remove('flipped'); if (fcAutoSpeak) speakText(w.hanzi); }
+}
+
+function flipCard() { isFlipped = !isFlipped; document.getElementById('flashcardContainer').classList.toggle('flipped'); }
+function nextCard() { fcIndex++; isFlipped = false; updateFlashcardUI(); }
+function prevCard() { fcIndex--; isFlipped = false; updateFlashcardUI(); }
+function speakCurrentCard() { if (fcWords.length > 0) speakText(fcWords[fcIndex].hanzi); }
+function saveFcSettings() { fcAutoSpeak = document.getElementById('fcAutoSpeak').checked; }
+
+// ==================== LOGIC LUYỆN VIẾT ====================
+// Chế độ: 'memory' = chỉ hiện pinyin/nghĩa, tự viết ra; 'trace' = tô theo nét mờ
+let writeMode = 'memory';
+let writeLevel = 'all';          // 'all' | cấp độ | 'wrong' (danh sách Từ sai)
+let writeRandom = false;
+let writeSettingsLoaded = false;
+let writeOrder = [];             // danh sách từ theo thứ tự luyện
+let writePos = 0;
+let writeSig = '';
+let writeWord = null;
+let writeChars = [];             // các chữ Hán của từ hiện tại (mỗi chữ một ô viết)
+let writers = [];                // mỗi ô một HanziWriter
+let writeBoxDone = [];           // ô nào đã viết xong
+let writeBoxMist = [];           // lỗi đang tính của từng ô
+let writeMistakes = 0;           // lỗi đã chốt (các ô xong / các lượt viết lại)
+let writePeeked = false;         // đã xem nét mẫu trước khi viết xong
+let writeDone = false;
+let writeToken = 0;              // chống callback cũ chạy sau khi đã chuyển từ
+let writeCounted = false;        // đã tính thống kê/Từ sai cho từ này chưa
+let writeStats = { done: 0, clean: 0 };
+const WRITE_WRONG_THRESHOLD = 3; // chế độ trí nhớ: sai >= 3 nét thì đưa vào Từ sai
+
+function wEl(id) { return document.getElementById(id); }
+
+function ensureWriteSettings() {
+  if (writeSettingsLoaded) return;
+  writeSettingsLoaded = true;
+  try {
+    const m = localStorage.getItem('zh_wmode_v13_2'); if (m === 'trace' || m === 'memory') writeMode = m;
+    const l = localStorage.getItem('zh_wlevel_v13_2'); if (l) writeLevel = l;
+    writeRandom = localStorage.getItem('zh_wrandom_v13_2') === '1';
+  } catch (e) {}
+}
+function saveWriteSettings() {
+  try {
+    localStorage.setItem('zh_wmode_v13_2', writeMode);
+    localStorage.setItem('zh_wlevel_v13_2', writeLevel);
+    localStorage.setItem('zh_wrandom_v13_2', writeRandom ? '1' : '0');
+  } catch (e) {}
+}
+
+function getWritePool() {
+  if (writeLevel === 'wrong') return wrongPool.filter(w => w && w.hanzi);
+  if (writeLevel === 'all') return words.filter(w => w && w.hanzi);
+  return words.filter(w => w && w.hanzi && w.level === writeLevel);
+}
+
+function refreshWriteLevelOptions() {
+  const sel = wEl('writeLevel'); if (!sel) return;
+  ensureWriteSettings();
+  const levels = Array.from(new Set(words.map(w => w.level))).filter(l => l);
+  levels.sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+
+  let h = '<option value="all">Tất cả (' + words.length + ')</option>';
+  levels.forEach(l => {
+    const n = words.filter(w => w.level === l).length;
+    if (n) h += '<option value="' + l + '">' + l + ' (' + n + ')</option>';
+  });
+  h += '<option value="wrong">🔥 Từ sai (' + wrongPool.length + ')</option>';
+  
+  sel.innerHTML = h;
+  if (!Array.from(sel.options).some(o => o.value === writeLevel)) writeLevel = 'all';
+  sel.value = writeLevel;
+}
+
+function syncWriteUI() {
+  wEl('wmMemory').classList.toggle('active', writeMode === 'memory');
+  wEl('wmTrace').classList.toggle('active', writeMode === 'trace');
+  wEl('writeRandom').checked = writeRandom;
+  wEl('writeLearnedBtn').classList.toggle('hidden', writeLevel !== 'wrong');
+}
+
+function buildWriteOrder() {
+  const pool = getWritePool().slice();
+  if (writeRandom) {
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+    }
+  }
+  writeOrder = pool; writePos = 0;
+}
+
+function enterWriteTab() {
+  ensureWriteSettings(); refreshWriteLevelOptions(); syncWriteUI();
+  const sig = writeLevel + '|' + words.length + '|' + (writeLevel === 'wrong' ? wrongPool.length : 0);
+  if (sig !== writeSig || !writeOrder.length) { writeSig = sig; buildWriteOrder(); }
+  loadWriteWord();
+}
+
+function changeWriteLevel() {
+  writeLevel = wEl('writeLevel').value; saveWriteSettings(); syncWriteUI();
+  writeSig = writeLevel + '|' + words.length + '|' + (writeLevel === 'wrong' ? wrongPool.length : 0);
+  buildWriteOrder(); loadWriteWord();
+}
+function setWriteMode(m) { writeMode = m; saveWriteSettings(); syncWriteUI(); loadWriteWord(); }
+function toggleWriteRandom() { writeRandom = wEl('writeRandom').checked; saveWriteSettings(); buildWriteOrder(); loadWriteWord(); }
+
+function setWritePrompt(msg, color) {
+  const fb = wEl('writerFeedback'); if (!fb) return;
+  if (msg) { fb.style.color = color || '#2c3e50'; fb.textContent = msg; return; }
+  const n = writeMistakes + writeBoxMist.reduce((x, y) => x + y, 0);
+  const total = writeChars.length, done = writeBoxDone.filter(Boolean).length;
+  const base = writeMode === 'memory' ? 'Viết theo trí nhớ, đúng thứ tự nét' : 'Tô theo nét mờ, đúng thứ tự nét';
+  fb.style.color = '#2c3e50';
+  fb.textContent = base + (total > 1 ? ' · Xong ' + done + '/' + total + ' chữ' : '') + (n ? ' · Lỗi: ' + n : '');
+}
+
+function updateWriteInfo() {
+  const w = writeWord;
+  wEl('writeProgress').textContent = writeOrder.length ? ((writePos + 1) + ' / ' + writeOrder.length) : '0 / 0';
+  if (!w) {
+    wEl('writeHanzi').textContent = ''; wEl('writePinyin').textContent = ''; wEl('writeMeaning').textContent = '';
+  } else {
+    const chars = writeChars.length ? writeChars : Array.from(w.hanzi);
+    const all = writeMode === 'trace' || writeDone || writePeeked;
+    wEl('writeHanzi').textContent = chars.map((c, i) => (all || writeBoxDone[i]) ? c : '？').join('');
+    wEl('writePinyin').textContent = w.pinyin + (w.hanviet ? '  ·  ' + w.hanviet : '');
+    wEl('writeMeaning').textContent = w.meaning || '';
+  }
+  wEl('writeStats').textContent = 'Phiên này: đã viết ' + writeStats.done + ' từ · không sai nét: ' + writeStats.clean;
+  wEl('writeNextBtn').classList.toggle('highlight', writeDone);
+}
+
+// Tải từ hiện tại: dựng MỘT HÀNG Ô, mỗi chữ Hán một ô, viết ô nào trước cũng được
+function loadWriteWord() {
+  writeToken++;
+  writers.forEach(wr => { try { wr.cancelQuiz(); } catch (e) {} });
+  writers = []; writeBoxDone = []; writeBoxMist = [];
+  wEl('writer-target').innerHTML = '';
+  writeMistakes = 0; writePeeked = false; writeDone = false; writeCounted = false;
+  writeChars = [];
+
+  if (!writeOrder.length) {
+    writeWord = null; updateWriteInfo();
+    setWritePrompt(writeLevel === 'wrong'
+      ? '🎉 Chưa có từ sai nào. Viết theo trí nhớ — từ nào sai nhiều nét sẽ tự vào đây.'
+      : 'Chưa có từ nào ở nguồn này.', '#888');
+    return;
+  }
+  if (writePos >= writeOrder.length || writePos < 0) writePos = 0;
+  writeWord = writeOrder[writePos];
+  writeChars = Array.from(writeWord.hanzi).filter(c => /[\u3400-\u9fff]/.test(c));
+  updateWriteInfo();
+  if (!writeChars.length) { setWritePrompt('⚠️ Từ này không có chữ Hán để luyện viết.', '#c0392b'); return; }
+  renderWriteBoxes();
+}
+
+function writeBoxSize(n) {
+  const avail = Math.min(window.innerWidth - 70, 640);
+  if (n <= 1) return Math.max(200, Math.min(300, avail));
+  return Math.max(120, Math.min(240, Math.floor((avail - 8 * (n - 1)) / n)));
+}
+
+function drawWriteGrid(box, size) {
+  try {
+    const svg = box.querySelector('svg'); if (!svg) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    [[0, 0, size, size], [size, 0, 0, size], [size / 2, 0, size / 2, size], [0, size / 2, size, size / 2]].forEach(c => {
+      const l = document.createElementNS(ns, 'line');
+      l.setAttribute('x1', c[0]); l.setAttribute('y1', c[1]); l.setAttribute('x2', c[2]); l.setAttribute('y2', c[3]);
+      l.setAttribute('stroke', '#e3d0d0'); l.setAttribute('stroke-width', '1'); l.setAttribute('stroke-dasharray', '4 4');
+      l.style.pointerEvents = 'none';
+      svg.insertBefore(l, svg.firstChild);
+    });
+  } catch (e) {}
+}
+
+function renderWriteBoxes() {
+  const my = writeToken;
+  if (typeof HanziWriter === 'undefined') {
+    setWritePrompt('⚠️ Không tải được thư viện HanziWriter (cần kết nối mạng).', '#c0392b'); return;
+  }
+  const target = wEl('writer-target');
+  const size = writeBoxSize(writeChars.length);
+  setWritePrompt('Đang tải nét chữ...', '#888');
+  writeChars.forEach((ch, i) => {
+    const box = document.createElement('div');
+    box.className = 'wbox'; box.id = 'wbox-' + i;
+    target.appendChild(box);
+    writeBoxDone[i] = false; writeBoxMist[i] = 0;
+    writers[i] = HanziWriter.create(box, ch, {
+      width: size, height: size, padding: 10,
+      showOutline: writeMode === 'trace', showCharacter: false,
+      showHintAfterMisses: writeMode === 'memory' ? 2 : 3,
+      strokeAnimationSpeed: 1.5, delayBetweenStrokes: 200,
+      onLoadCharDataError: () => {
+        if (my !== writeToken) return;
+        setWritePrompt('⚠️ Không tải được dữ liệu nét viết cho chữ ' + ch + ' (cần mạng).', '#c0392b');
+      }
+    });
+    drawWriteGrid(box, size);
+  });
+  startQuizAll(false);
+}
+
+// Bắt đầu (hoặc bắt đầu lại) bài viết ở một ô. carry = giữ lại số lỗi của lượt trước
+function startQuizAt(i, carry) {
+  const wr = writers[i]; if (!wr) return;
+  const my = writeToken;
+  if (carry) writeMistakes += writeBoxMist[i];
+  writeBoxMist[i] = 0; writeBoxDone[i] = false;
+  const box = wEl('wbox-' + i); if (box) box.classList.remove('done');
+  try { wr.cancelQuiz(); } catch (e) {}
+  wr.quiz({
+    onMistake: (info) => { if (my !== writeToken) return; writeBoxMist[i] = (info && info.totalMistakes) || 0; setWritePrompt(); },
+    onComplete: (summary) => { if (my !== writeToken) return; onWriteBoxComplete(i, summary); }
+  });
+}
+function startQuizAll(carry) {
+  writers.forEach((_, i) => startQuizAt(i, carry));
+  updateWriteInfo(); setWritePrompt();
+}
+
+function onWriteBoxComplete(i, summary) {
+  writeMistakes += (summary && summary.totalMistakes) || 0;
+  writeBoxMist[i] = 0; writeBoxDone[i] = true;
+  const box = wEl('wbox-' + i); if (box) box.classList.add('done');
+  if (writeBoxDone.every(Boolean)) { finishWriteWord(); return; }
+  const left = writeBoxDone.filter(x => !x).length;
+  setWritePrompt('✅ Xong chữ thứ ' + (i + 1) + ' — còn ' + left + ' chữ nữa', '#27ae60');
+  updateWriteInfo();
+}
+
+function finishWriteWord() {
+  writeDone = true;
+  const clean = writeMistakes === 0 && !writePeeked;
+  let msg = clean ? '🎉 Hoàn hảo! Không sai nét nào.' : '✅ Hoàn thành! Số lỗi: ' + writeMistakes + (writePeeked ? ' (đã xem nét mẫu)' : '');
+  if (!writeCounted) {
+    writeCounted = true; writeStats.done++;
+    if (clean) writeStats.clean++;
+    if (writeMode === 'memory' && (writeMistakes >= WRITE_WRONG_THRESHOLD || writePeeked)) {
+      if (addWordToWrongPool(writeWord)) msg += ' — đã thêm vào Từ sai để ôn lại.';
+    }
+  }
+  setWritePrompt(msg + ' Bấm "Tiếp →" khi sẵn sàng.', '#27ae60');
+  updateWriteInfo();
+}
+
+function addWordToWrongPool(w) {
+  if (!w || wrongPool.some(x => x.hanzi === w.hanzi && x.pinyin === w.pinyin)) return false;
+  wrongPool.push({ level: w.level, hanzi: w.hanzi, pinyin: w.pinyin, hanviet: w.hanviet, meaning: w.meaning });
+  const el = wEl('wrongPoolCount'); if (el) el.textContent = wrongPool.length;
+  saveAll(); refreshWriteLevelOptions();
+  return true;
+}
+
+function stepWrite(d) {
+  if (!writeOrder.length) return;
+  let np = writePos + d;
+  if (np >= writeOrder.length) { if (writeRandom) buildWriteOrder(); np = 0; }
+  else if (np < 0) np = writeOrder.length - 1;
+  writePos = np; loadWriteWord();
+}
+function writeNext() { stepWrite(1); }
+function writePrev() { stepWrite(-1); }
+
+function playAnimation() {
+  if (!writers.length) { alert('Chưa có chữ để xem. Hãy chọn nguồn từ khác.'); return; }
+  const my = writeToken;
+  const wasDone = writeDone;
+  if (!wasDone) writePeeked = true;
+  writeMistakes += writeBoxMist.reduce((x, y) => x + y, 0);
+  writeBoxMist = writeBoxMist.map(() => 0);
+  writers.forEach(wr => { try { wr.cancelQuiz(); } catch (e) {} });
+  setWritePrompt(wasDone ? 'Xem nét mẫu' : 'Xem nét mẫu — xong sẽ tự bắt đầu viết lại', '#2980b9');
+  updateWriteInfo();
+  const seq = (i) => {
+    if (my !== writeToken) return;
+    if (i >= writers.length) { if (!wasDone) startQuizAll(false); return; }
+    writers[i].animateCharacter({ onComplete: () => seq(i + 1) });
+  };
+  seq(0);
+}
+
+// Viết lại cả từ (giữ số lỗi đã mắc); từ đã xong thì bắt đầu lại từ đầu
+function restartWrite() {
+  if (!writers.length && !writeWord) return;
+  if (writeDone) { loadWriteWord(); return; }
+  startQuizAll(true);
+}
+
+function speakWriteWord() { if (writeWord) speakText(writeWord.hanzi); }
+
+function markWriteLearned() {
+  if (!writeWord) return;
+  const i = wrongPool.findIndex(w => w.hanzi === writeWord.hanzi && w.pinyin === writeWord.pinyin);
+  if (i >= 0) wrongPool.splice(i, 1);
+  saveAll();
+  const el = wEl('wrongPoolCount'); if (el) el.textContent = wrongPool.length;
+  if (writeLevel === 'wrong') { writeOrder.splice(writePos, 1); writeSig = 'wrong|' + words.length + '|' + wrongPool.length; }
+  refreshWriteLevelOptions();
+  if (writePos >= writeOrder.length) writePos = 0;
+  loadWriteWord();
+}
+
+// ==================== TÌM TỪ TRONG TAB LUYỆN VIẾT ====================
+function plain(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/[\s'’\-]/g, '');
+}
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function writeSearchInput() {
+  const q = wEl('writeSearch').value.trim();
+  const box = wEl('writeSearchRes');
+  if (!q) { box.innerHTML = ''; return; }
+  const pq = plain(q);
+  const res = [];
+  for (let i = 0; i < words.length && res.length < 30; i++) {
+    const w = words[i];
+    if (w.hanzi.includes(q) || plain(w.pinyin).includes(pq) || plain(w.hanviet).includes(pq) || plain(w.meaning).includes(pq)) res.push(i);
+  }
+  if (!res.length) {
+    box.innerHTML = '<div class="sr-empty">Không thấy "' + escHtml(q) + '" trong thư viện. ' +
+      '<button class="btn-secondary" style="padding:6px 12px;font-size:13px;" onclick="searchOnlineFromWrite()">🌐 Tìm online</button></div>';
+    return;
+  }
+  box.innerHTML = res.map(i => {
+    const w = words[i];
+    return '<button class="sr-item" onclick="writeGoto(' + i + ')"><span class="h">' + escHtml(w.hanzi) + '</span><span class="p">' + escHtml(w.pinyin) +
+      '</span><span class="m">' + escHtml(w.meaning) + '</span><span class="lv">' + escHtml(w.level) + '</span></button>';
+  }).join('');
+}
+
+function clearWriteSearch() { wEl('writeSearch').value = ''; wEl('writeSearchRes').innerHTML = ''; }
+
+function writeGoto(i) {
+  const w = words[i]; if (!w) return;
+  const find = () => writeOrder.findIndex(x => x.hanzi === w.hanzi && x.pinyin === w.pinyin);
+  let pos = find();
+  if (pos < 0) {
+    writeLevel = 'all'; saveWriteSettings(); refreshWriteLevelOptions(); syncWriteUI();
+    writeSig = writeLevel + '|' + words.length + '|0';
+    buildWriteOrder(); pos = find();
+  }
+  writePos = Math.max(pos, 0);
+  clearWriteSearch();
+  loadWriteWord();
+}
+
+function searchOnlineFromWrite() {
+  const q = wEl('writeSearch').value.trim();
+  showTab('input');
+  wEl('onlineQuery').value = q;
+  onlineSearch();
+}
+
+// ==================== TÌM TỪ ONLINE ====================
+async function gtx(q, sl, tl) {
+  const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + sl + '&tl=' + tl +
+    '&dt=t&dt=rm&dt=bd&q=' + encodeURIComponent(q);
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function olMsg(text, color) {
+  const el = wEl('onlineMsg'); el.style.color = color || '#555'; el.textContent = text || '';
+}
+function capFirst(s) { s = String(s || '').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+function guessHanViet(hanzi) {
+  const chars = Array.from(hanzi);
+  const out = [];
+  for (const c of chars) {
+    const hit = words.find(w => w.hanzi === c && w.hanviet);
+    if (!hit) return '';
+    out.push(hit.hanviet);
+  }
+  return out.join(' ');
+}
+
+async function onlineSearch(forcedQuery) {
+  const q = (typeof forcedQuery === 'string' ? forcedQuery : wEl('onlineQuery').value).trim();
+  if (!q) { olMsg('Vui lòng nhập từ cần tìm.', '#c0392b'); return; }
+  wEl('onlineQuery').value = q;
+  wEl('onlineResult').innerHTML = ''; wEl('onlineChips').innerHTML = '';
+  olMsg('⏳ Đang tìm "' + q + '"...');
+  try {
+    if (/[㐀-鿿]/.test(q)) {
+      await lookupHanzi(q, '');
+    } else {
+      const data = await gtx(q, 'auto', 'zh-CN');
+      const cands = [];
+      const main = (data[0] || []).map(s => s[0] || '').join('').trim();
+      if (main) cands.push(main);
+      (data[1] || []).forEach(g => (g[1] || []).forEach(t => { if (t && !cands.includes(t) && cands.length < 8) cands.push(t); }));
+      if (!cands.length) { olMsg('Không tìm thấy kết quả cho "' + q + '".', '#c0392b'); return; }
+      wEl('onlineChips').innerHTML = cands.map((c, i) =>
+        '<button class="chip" onclick="lookupHanzi(' + "'" + escHtml(c).replace(/'/g, '') + "'" + ', ' + "'" + escHtml(q).replace(/'/g, '') + "'" + ')">' + escHtml(c) + '</button>').join('');
+      await lookupHanzi(cands[0], q);
+    }
+  } catch (err) {
+    olMsg('⚠️ Không tìm online được (' + err.message + '). Kiểm tra kết nối mạng, hoặc nhập tay ở bên dưới.', '#c0392b');
+    renderOnlineForm({ hanzi: /[㐀-鿿]/.test(q) ? q : '', pinyin: '', hanviet: '', meaning: /[㐀-鿿]/.test(q) ? '' : capFirst(q) }, []);
+  }
+}
+
+async function lookupHanzi(hanzi, hintMeaning) {
+  olMsg('⏳ Đang tra "' + hanzi + '"...');
+  try {
+    const data = await gtx(hanzi, 'zh-CN', 'vi');
+    const segs = data[0] || [];
+    let meaning = segs.map(s => s[0] || '').join('').trim();
+    let pinyin = segs.map(s => s[3] || '').join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (Array.from(hanzi).length <= 4) pinyin = pinyin.replace(/\s+/g, '');
+    const alts = [];
+    (data[1] || []).forEach(g => (g[1] || []).forEach(t => { if (t && !alts.includes(t) && alts.length < 6) alts.push(t); }));
+    renderOnlineForm({
+      hanzi: hanzi,
+      pinyin: pinyin,
+      hanviet: guessHanViet(hanzi),
+      meaning: capFirst(hintMeaning || meaning)
+    }, alts.filter(a => a.toLowerCase() !== (hintMeaning || meaning).toLowerCase()));
+    olMsg('Kiểm tra lại thông tin (có thể sửa) rồi bấm "Thêm vào thư viện".');
+  } catch (err) {
+    olMsg('⚠️ Không tra được "' + hanzi + '" (' + err.message + '). Bạn có thể nhập tay.', '#c0392b');
+    renderOnlineForm({ hanzi: hanzi, pinyin: '', hanviet: '', meaning: capFirst(hintMeaning) }, []);
+  }
+}
+
+function renderOnlineForm(d, alts) {
+  const altHtml = alts.length
+    ? '<div class="hint" style="margin-top:8px;">Nghĩa khác (bấm để dùng):</div><div class="chips">' +
+      alts.map(a => '<button class="chip" onclick="wEl(\'olM\').value=this.textContent">' + escHtml(capFirst(a)) + '</button>').join('') + '</div>'
+    : '';
+  wEl('onlineResult').innerHTML =
+    '<div class="ol-form">' +
+    '<label>Hán tự</label><input id="olH" value="' + escHtml(d.hanzi) + '">' +
+    '<label>Pinyin</label><input id="olP" value="' + escHtml(d.pinyin) + '">' +
+    '<label>Hán Việt</label><input id="olV" value="' + escHtml(d.hanviet) + '" placeholder="(không bắt buộc)">' +
+    '<label>Nghĩa</label><input id="olM" value="' + escHtml(d.meaning) + '">' +
+    '</div>' + altHtml +
+    '<div style="margin-top:12px;">' +
+    '<button class="btn-append" onclick="addOnlineWord(false)">➕ Thêm vào thư viện</button>' +
+    '<button class="btn-primary" onclick="addOnlineWord(true)">➕✍️ Thêm &amp; luyện viết</button>' +
+    '<button class="btn-ghost" onclick="speakText(wEl(\'olH\').value)">🔊 Nghe</button>' +
+    '</div>';
+}
+
+function addOnlineWord(thenWrite) {
+  const hanzi = wEl('olH').value.trim(), pinyin = wEl('olP').value.trim();
+  const hanviet = wEl('olV').value.trim(), meaning = wEl('olM').value.trim();
+  if (!hanzi || !pinyin || !meaning) { olMsg('⚠️ Cần điền đủ Hán tự, Pinyin và Nghĩa.', '#c0392b'); return; }
+  let idx = words.findIndex(w => w.hanzi === hanzi && w.pinyin === pinyin);
+  if (idx >= 0) {
+    olMsg('ℹ️ Từ "' + hanzi + '" đã có trong thư viện.', '#e67e22');
+  } else {
+    words.push({ level: 'Tự nhập', hanzi, pinyin, hanviet, meaning });
+    idx = words.length - 1;
+    saveAll(); updateUI();
+    olMsg('✅ Đã thêm "' + hanzi + '" vào thư viện (mục "Từ tự nhập thêm").', '#27ae60');
+  }
+  if (thenWrite) {
+    showTab('write');
+    writeGoto(idx);
   }
 }
 
 // ==================== HÀM PHỤ ====================
 function addToWrongPool() {
   if (!wrongPool.some(w => w.hanzi === currentWord.hanzi && w.pinyin === currentWord.pinyin)) {
-    wrongPool.push({ lesson: currentWord.lesson, hanzi: currentWord.hanzi, pinyin: currentWord.pinyin, meaning: currentWord.meaning });
-    document.getElementById('wrongPoolCount').textContent = wrongPool.length;
-    saveAll();
+    wrongPool.push({ level: currentWord.level, hanzi: currentWord.hanzi, pinyin: currentWord.pinyin, hanviet: currentWord.hanviet, meaning: currentWord.meaning });
+    document.getElementById('wrongPoolCount').textContent = wrongPool.length; saveAll();
   }
 }
-
-function updateStats() {
-  document.getElementById('correctCount').textContent = correct;
-  document.getElementById('wrongCount').textContent = wrong;
-  document.getElementById('totalCount').textContent = total;
-}
-
-function resetStats() {
-  correct = 0; wrong = 0; total = 0;
-  updateStats();
-}
-
-function resetWrongPool() {
-  if (confirm('Xóa toàn bộ danh sách từ sai?')) {
-    wrongPool = [];
-    saveAll();
-    document.getElementById('wrongPoolCount').textContent = 0;
-  }
-}
+function updateStats() { document.getElementById('correctCount').textContent = correct; document.getElementById('wrongCount').textContent = wrong; document.getElementById('totalCount').textContent = total; }
+function resetStats() { correct = 0; wrong = 0; total = 0; updateStats(); }
+function resetWrongPool() { if (confirm('Xóa toàn bộ danh sách từ sai?')) { wrongPool = []; saveAll(); document.getElementById('wrongPoolCount').textContent = 0; } }
 
 // ==================== KHỞI ĐỘNG ====================
 loadFromStorage();
