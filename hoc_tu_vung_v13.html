@@ -175,7 +175,7 @@
 // =====================================================================
 const CLASS_NAMES = [
   'LEHOAIK21',
-  'HSK2 K01'
+  'LE THI THU HOAI'
 ];
 // =====================================================================
 
@@ -196,7 +196,7 @@ function gateCheck() {
 }
 (function () {
   try {
-    const saved = localStorage.getItem('zh_gate_v13');
+    const saved = localStorage.getItem('zh_gate_v131');
     if (saved && GATE_OK.includes(saved)) { gateUnlock(); return; }
   } catch (e) {}
   setTimeout(() => { const i = document.getElementById('gateInput'); if (i) i.focus(); }, 100);
