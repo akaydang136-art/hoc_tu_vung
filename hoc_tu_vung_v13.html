@@ -187,7 +187,7 @@ function gateUnlock() { document.getElementById('gate').classList.add('hidden');
 function gateCheck() {
   const v = gateNorm(document.getElementById('gateInput').value);
   if (v && GATE_OK.includes(v)) {
-    try { localStorage.setItem('zh_gate_v13', v); } catch (e) {}
+    try { localStorage.setItem('zh_gate_v131', v); } catch (e) {}
     gateUnlock();
   } else {
     document.getElementById('gateErr').textContent = '❌ Tên lớp không đúng, vui lòng thử lại.';
