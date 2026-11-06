@@ -98,8 +98,10 @@
   .flashcard-controls { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
 
   #writer-container { display: flex; flex-direction: column; align-items: center; margin-top: 20px; }
-  #writer-target { background: #fafafa; border: 2px dashed #ccc; border-radius: 12px; margin-bottom: 15px; touch-action: none; line-height: 0; }
-  #writer-target svg { touch-action: none; display: block; }
+  #writer-target { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 100%; margin-bottom: 15px; }
+  .wbox { background: #fafafa; border: 2px dashed #ccc; border-radius: 12px; touch-action: none; line-height: 0; }
+  .wbox svg { touch-action: none; display: block; }
+  .wbox.done { border-style: solid; border-color: #27ae60; background: #f3fbf6; }
   .writer-controls { display: flex; gap: 10px; justify-content: center; }
 
   .write-bar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: center; margin: 10px 0; }
@@ -1346,15 +1348,14 @@ let writeOrder = [];             // danh sách từ theo thứ tự luyện
 let writePos = 0;
 let writeSig = '';
 let writeWord = null;
-let writeChars = [];             // các chữ Hán của từ hiện tại
-let writeCharIdx = 0;
-let writeMistakes = 0;           // lỗi của các chữ/lượt đã xong
-let writeCharMistakes = 0;       // lỗi của lượt đang viết
+let writeChars = [];             // các chữ Hán của từ hiện tại (mỗi chữ một ô viết)
+let writers = [];                // mỗi ô một HanziWriter
+let writeBoxDone = [];           // ô nào đã viết xong
+let writeBoxMist = [];           // lỗi đang tính của từng ô
+let writeMistakes = 0;           // lỗi đã chốt (các ô xong / các lượt viết lại)
 let writePeeked = false;         // đã xem nét mẫu trước khi viết xong
 let writeDone = false;
 let writeToken = 0;              // chống callback cũ chạy sau khi đã chuyển từ
-let writeCharDone = false;       // chữ hiện tại đã viết xong
-let writeReach = 0;              // số chữ đã viết xong (để hiện lại chữ Hán)
 let writeCounted = false;        // đã tính thống kê/Từ sai cho từ này chưa
 let writeStats = { done: 0, clean: 0 };
 const WRITE_WRONG_THRESHOLD = 3; // chế độ trí nhớ: sai >= 3 nét thì đưa vào Từ sai
@@ -1436,11 +1437,11 @@ function toggleWriteRandom() { writeRandom = wEl('writeRandom').checked; saveWri
 function setWritePrompt(msg, color) {
   const fb = wEl('writerFeedback'); if (!fb) return;
   if (msg) { fb.style.color = color || '#2c3e50'; fb.textContent = msg; return; }
-  const n = writeMistakes + writeCharMistakes;
-  const where = writeChars.length > 1 ? 'Chữ ' + (writeCharIdx + 1) + '/' + writeChars.length + ' · ' : '';
+  const n = writeMistakes + writeBoxMist.reduce((x, y) => x + y, 0);
+  const total = writeChars.length, done = writeBoxDone.filter(Boolean).length;
   const base = writeMode === 'memory' ? 'Viết theo trí nhớ, đúng thứ tự nét' : 'Tô theo nét mờ, đúng thứ tự nét';
   fb.style.color = '#2c3e50';
-  fb.textContent = where + base + (n ? ' · Lỗi: ' + n : '');
+  fb.textContent = base + (total > 1 ? ' · Xong ' + done + '/' + total + ' chữ' : '') + (n ? ' · Lỗi: ' + n : '');
 }
 
 function updateWriteInfo() {
@@ -1451,22 +1452,22 @@ function updateWriteInfo() {
   } else {
     const chars = writeChars.length ? writeChars : Array.from(w.hanzi);
     const all = writeMode === 'trace' || writeDone || writePeeked;
-    wEl('writeHanzi').textContent = chars.map((c, i) => (all || i < writeReach) ? c : '？').join('');
+    wEl('writeHanzi').textContent = chars.map((c, i) => (all || writeBoxDone[i]) ? c : '？').join('');
     wEl('writePinyin').textContent = w.pinyin + (w.hanviet ? '  ·  ' + w.hanviet : '');
     wEl('writeMeaning').textContent = w.meaning || '';
   }
   wEl('writeStats').textContent = 'Phiên này: đã viết ' + writeStats.done + ' từ · không sai nét: ' + writeStats.clean;
-  wEl('writeNextBtn').classList.toggle('highlight', writeCharDone || writeDone);
+  wEl('writeNextBtn').classList.toggle('highlight', writeDone);
 }
 
-// Tải từ hiện tại (đặt lại toàn bộ trạng thái của từ)
+// Tải từ hiện tại: dựng MỘT HÀNG Ô, mỗi chữ Hán một ô, viết ô nào trước cũng được
 function loadWriteWord() {
   writeToken++;
-  if (writer) { try { writer.cancelQuiz(); } catch (e) {} writer = null; }
+  writers.forEach(wr => { try { wr.cancelQuiz(); } catch (e) {} });
+  writers = []; writeBoxDone = []; writeBoxMist = [];
   wEl('writer-target').innerHTML = '';
-  writeMistakes = 0; writeCharMistakes = 0; writePeeked = false; writeDone = false;
-  writeCharDone = false; writeReach = 0; writeCounted = false;
-  writeChars = []; writeCharIdx = 0;
+  writeMistakes = 0; writePeeked = false; writeDone = false; writeCounted = false;
+  writeChars = [];
 
   if (!writeOrder.length) {
     writeWord = null; updateWriteInfo();
@@ -1480,12 +1481,18 @@ function loadWriteWord() {
   writeChars = Array.from(writeWord.hanzi).filter(c => /[\u3400-\u9fff]/.test(c));
   updateWriteInfo();
   if (!writeChars.length) { setWritePrompt('⚠️ Từ này không có chữ Hán để luyện viết.', '#c0392b'); return; }
-  renderWriteChar();
+  renderWriteBoxes();
 }
 
-function drawWriteGrid(size) {
+function writeBoxSize(n) {
+  const avail = Math.min(window.innerWidth - 70, 640);
+  if (n <= 1) return Math.max(200, Math.min(300, avail));
+  return Math.max(120, Math.min(240, Math.floor((avail - 8 * (n - 1)) / n)));
+}
+
+function drawWriteGrid(box, size) {
   try {
-    const svg = document.querySelector('#writer-target svg'); if (!svg) return;
+    const svg = box.querySelector('svg'); if (!svg) return;
     const ns = 'http://www.w3.org/2000/svg';
     [[0, 0, size, size], [size, 0, 0, size], [size / 2, 0, size / 2, size], [0, size / 2, size, size / 2]].forEach(c => {
       const l = document.createElementNS(ns, 'line');
@@ -1497,59 +1504,60 @@ function drawWriteGrid(size) {
   } catch (e) {}
 }
 
-// Tạo khung viết cho chữ hiện tại (writeCharIdx)
-function renderWriteChar() {
+function renderWriteBoxes() {
   const my = writeToken;
   if (typeof HanziWriter === 'undefined') {
     setWritePrompt('⚠️ Không tải được thư viện HanziWriter (cần kết nối mạng).', '#c0392b'); return;
   }
-  if (writer) { try { writer.cancelQuiz(); } catch (e) {} writer = null; }
-  wEl('writer-target').innerHTML = '';
-  writeCharMistakes = 0; writeCharDone = false;
-  const size = Math.max(200, Math.min(300, window.innerWidth - 90));
-  let failed = false;
+  const target = wEl('writer-target');
+  const size = writeBoxSize(writeChars.length);
   setWritePrompt('Đang tải nét chữ...', '#888');
-  const created = HanziWriter.create('writer-target', writeChars[writeCharIdx], {
-    width: size, height: size, padding: 10,
-    showOutline: writeMode === 'trace', showCharacter: false,
-    showHintAfterMisses: writeMode === 'memory' ? 2 : 3,
-    strokeAnimationSpeed: 1.5, delayBetweenStrokes: 200,
-    onLoadCharDataError: () => {
-      if (my !== writeToken) return;
-      failed = true; writer = null;
-      setWritePrompt('⚠️ Không tải được dữ liệu nét viết cho chữ này (cần mạng).', '#c0392b');
-    }
+  writeChars.forEach((ch, i) => {
+    const box = document.createElement('div');
+    box.className = 'wbox'; box.id = 'wbox-' + i;
+    target.appendChild(box);
+    writeBoxDone[i] = false; writeBoxMist[i] = 0;
+    writers[i] = HanziWriter.create(box, ch, {
+      width: size, height: size, padding: 10,
+      showOutline: writeMode === 'trace', showCharacter: false,
+      showHintAfterMisses: writeMode === 'memory' ? 2 : 3,
+      strokeAnimationSpeed: 1.5, delayBetweenStrokes: 200,
+      onLoadCharDataError: () => {
+        if (my !== writeToken) return;
+        setWritePrompt('⚠️ Không tải được dữ liệu nét viết cho chữ ' + ch + ' (cần mạng).', '#c0392b');
+      }
+    });
+    drawWriteGrid(box, size);
   });
-  if (failed) return;
-  writer = created;
-  drawWriteGrid(size);
-  startQuiz(false);
+  startQuizAll(false);
 }
 
-function startQuiz(carry) {
-  if (!writer) return;
+// Bắt đầu (hoặc bắt đầu lại) bài viết ở một ô. carry = giữ lại số lỗi của lượt trước
+function startQuizAt(i, carry) {
+  const wr = writers[i]; if (!wr) return;
   const my = writeToken;
-  if (carry) writeMistakes += writeCharMistakes;
-  writeCharMistakes = 0;
-  try { writer.cancelQuiz(); } catch (e) {}
-  setWritePrompt();
-  writer.quiz({
-    onMistake: (info) => { if (my !== writeToken) return; writeCharMistakes = (info && info.totalMistakes) || 0; setWritePrompt(); },
-    onComplete: (summary) => { if (my !== writeToken) return; onWriteCharComplete(summary); }
+  if (carry) writeMistakes += writeBoxMist[i];
+  writeBoxMist[i] = 0; writeBoxDone[i] = false;
+  const box = wEl('wbox-' + i); if (box) box.classList.remove('done');
+  try { wr.cancelQuiz(); } catch (e) {}
+  wr.quiz({
+    onMistake: (info) => { if (my !== writeToken) return; writeBoxMist[i] = (info && info.totalMistakes) || 0; setWritePrompt(); },
+    onComplete: (summary) => { if (my !== writeToken) return; onWriteBoxComplete(i, summary); }
   });
 }
+function startQuizAll(carry) {
+  writers.forEach((_, i) => startQuizAt(i, carry));
+  updateWriteInfo(); setWritePrompt();
+}
 
-function onWriteCharComplete(summary) {
+function onWriteBoxComplete(i, summary) {
   writeMistakes += (summary && summary.totalMistakes) || 0;
-  writeCharMistakes = 0;
-  writeCharDone = true;
-  writeReach = Math.max(writeReach, writeCharIdx + 1);
-  if (writeCharIdx < writeChars.length - 1) {
-    setWritePrompt('✅ Xong chữ ' + (writeCharIdx + 1) + '/' + writeChars.length + ' — bấm "Tiếp →" khi muốn sang chữ kế tiếp', '#27ae60');
-    updateWriteInfo();
-    return;
-  }
-  finishWriteWord();
+  writeBoxMist[i] = 0; writeBoxDone[i] = true;
+  const box = wEl('wbox-' + i); if (box) box.classList.add('done');
+  if (writeBoxDone.every(Boolean)) { finishWriteWord(); return; }
+  const left = writeBoxDone.filter(x => !x).length;
+  setWritePrompt('✅ Xong chữ thứ ' + (i + 1) + ' — còn ' + left + ' chữ nữa', '#27ae60');
+  updateWriteInfo();
 }
 
 function finishWriteWord() {
@@ -1582,36 +1590,32 @@ function stepWrite(d) {
   else if (np < 0) np = writeOrder.length - 1;
   writePos = np; loadWriteWord();
 }
-function goWriteChar(i) {
-  writeToken++;                                  // huỷ callback cũ
-  writeMistakes += writeCharMistakes; writeCharMistakes = 0;
-  writeCharIdx = i; writeCharDone = false; writeDone = false;
-  updateWriteInfo(); renderWriteChar();
-}
-function writeNext() {
-  if (writeChars.length > 1 && writeCharIdx < writeChars.length - 1) { goWriteChar(writeCharIdx + 1); return; }
-  stepWrite(1);
-}
-function writePrev() {
-  if (writeChars.length > 1 && writeCharIdx > 0) { goWriteChar(writeCharIdx - 1); return; }
-  stepWrite(-1);
-}
+function writeNext() { stepWrite(1); }
+function writePrev() { stepWrite(-1); }
 
 function playAnimation() {
-  if (!writer) { alert('Chưa có chữ để xem. Hãy chọn nguồn từ khác.'); return; }
+  if (!writers.length) { alert('Chưa có chữ để xem. Hãy chọn nguồn từ khác.'); return; }
   const my = writeToken;
-  if (!writeDone) writePeeked = true;
-  writeMistakes += writeCharMistakes; writeCharMistakes = 0;
-  try { writer.cancelQuiz(); } catch (e) {}
-  setWritePrompt('Xem nét mẫu — xong sẽ tự bắt đầu viết lại', '#2980b9');
+  const wasDone = writeDone;
+  if (!wasDone) writePeeked = true;
+  writeMistakes += writeBoxMist.reduce((x, y) => x + y, 0);
+  writeBoxMist = writeBoxMist.map(() => 0);
+  writers.forEach(wr => { try { wr.cancelQuiz(); } catch (e) {} });
+  setWritePrompt(wasDone ? 'Xem nét mẫu' : 'Xem nét mẫu — xong sẽ tự bắt đầu viết lại', '#2980b9');
   updateWriteInfo();
-  writer.animateCharacter({ onComplete: () => { if (my === writeToken && !writeDone) startQuiz(false); } });
+  const seq = (i) => {
+    if (my !== writeToken) return;
+    if (i >= writers.length) { if (!wasDone) startQuizAll(false); return; }
+    writers[i].animateCharacter({ onComplete: () => seq(i + 1) });
+  };
+  seq(0);
 }
 
+// Viết lại cả từ (giữ số lỗi đã mắc); từ đã xong thì bắt đầu lại từ đầu
 function restartWrite() {
-  if (!writer && !writeWord) return;
+  if (!writers.length && !writeWord) return;
   if (writeDone) { loadWriteWord(); return; }
-  startQuiz(true);
+  startQuizAll(true);
 }
 
 function speakWriteWord() { if (writeWord) speakText(writeWord.hanzi); }
