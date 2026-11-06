@@ -199,7 +199,7 @@ function gateUnlock() { document.getElementById('gate').classList.add('hidden');
 function gateCheck() {
   const v = gateNorm(document.getElementById('gateInput').value);
   if (v && GATE_OK.includes(v)) {
-    try { localStorage.setItem('zh_gate_v15', v); } catch (e) {}
+    try { localStorage.setItem('zh_gate_v151', v); } catch (e) {}
     gateUnlock();
   } else {
     document.getElementById('gateErr').textContent = '❌ Tên lớp không đúng, vui lòng thử lại.';
@@ -208,7 +208,7 @@ function gateCheck() {
 }
 (function () {
   try {
-    const saved = localStorage.getItem('zh_gate_v15');
+    const saved = localStorage.getItem('zh_gate_v151');
     if (saved && GATE_OK.includes(saved)) { gateUnlock(); return; }
   } catch (e) {}
   setTimeout(() => { const i = document.getElementById('gateInput'); if (i) i.focus(); }, 100);
