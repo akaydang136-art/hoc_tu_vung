@@ -3,8 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// =====================================================================
+// TỰ CẬP NHẬT PHIÊN BẢN
+//  • Mỗi lần sửa code và đăng lại, ĐỔI số APP_VERSION dưới đây (ví dụ '25.1' -> '25.2').
+//  • Mỗi lần mở trang, app hỏi máy chủ số phiên bản mới nhất; nếu khác thì tự tải lại bản mới
+//    (kể cả khi trình duyệt/Zalo đang giữ bản cũ trong bộ nhớ đệm).
+//  • Dòng APP_VERSION phải nằm ở ĐẦU file: app chỉ đọc phần đầu file để kiểm tra.
+// =====================================================================
+var APP_VERSION = '4';
+(function () {
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') return;   // mở trực tiếp từ file thì bỏ qua
+  if (typeof fetch !== 'function') return;
+  var lastCheck = 0;
+
+  // Chỉ đọc phần đầu của file (đủ để thấy APP_VERSION) rồi dừng, để không tốn dung lượng mạng
+  function readHead(url) {
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) return '';
+      if (!r.body || !r.body.getReader || typeof TextDecoder === 'undefined') return r.text();
+      var rd = r.body.getReader(), dec = new TextDecoder(), buf = '';
+      function step(x) {
+        if (x.done) return buf;
+        buf += dec.decode(x.value, { stream: true });
+        if (/APP_VERSION\s*=\s*'\d[^']*'/.test(buf) || buf.length > 30000) { try { rd.cancel(); } catch (e) {} return buf; }
+        return rd.read().then(step);
+      }
+      return rd.read().then(step);
+    });
+  }
+
+  function go(u) { (window.__appNav || function (x) { location.replace(x); })(u); }
+
+  function showBanner(u) {
+    if (document.getElementById('updBanner') || !document.body) return;
+    var b = document.createElement('div');
+    b.id = 'updBanner';
+    b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#2c3e50;color:#fff;padding:12px 16px;text-align:center;font-size:15px;box-shadow:0 -2px 8px rgba(0,0,0,.3);';
+    b.innerHTML = '🔄 Có bản cập nhật mới. <button id="updBtn" style="margin-left:8px;padding:8px 14px;border:none;border-radius:6px;background:#e67e22;color:#fff;font-size:15px;cursor:pointer;">Cập nhật ngay</button>';
+    document.body.appendChild(b);
+    document.getElementById('updBtn').onclick = function () { go(u); };
+  }
+
+  function check(onNew) {
+    lastCheck = Date.now();
+    readHead(location.origin + location.pathname + '?nocache=' + Date.now()).then(function (t) {
+      var m = t && t.match(/APP_VERSION\s*=\s*'(\d[^']*)'/);
+      if (!m || m[1] === APP_VERSION) return;
+      var u = new URL(location.href);
+      if (u.searchParams.get('v') === m[1]) return;            // đã tải bản này rồi mà vẫn khác: không lặp lại
+      u.searchParams.delete('nocache'); u.searchParams.set('v', m[1]);
+      onNew(u.toString());
+    })['catch'](function () {});
+  }
+
+  check(go);                                                   // lúc mở trang: tự tải lại ngay nếu có bản mới
+  document.addEventListener('visibilitychange', function () {  // người dùng để trang mở lâu rồi quay lại: hiện thanh báo
+    if (document.visibilityState === 'visible' && Date.now() - lastCheck > 600000) check(showBanner);
+  });
+})();
+</script>
+<!-- Google Analytics: theo dõi lượt dùng -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-1PEX54PNR4"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-1PEX54PNR4', { app_version: 'HSK2-V4' });
+</script>
 <title>Sổ tay Từ vựng HSK 2 (Theo Bài)</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>if (typeof XLSX === 'undefined') document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
+<script>if (typeof XLSX === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');</script>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 <style>
   * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
@@ -24,6 +94,8 @@
   .btn-secondary:hover { background: #2980b9; }
   .btn-ghost { background: #ecf0f1; color: #333; }
   .btn-ghost:hover { background: #d5dbdb; }
+  .btn-danger { background: #fdecea; color: #c0392b; border: 1px solid #f1b0a8; }
+  .btn-danger:hover { background: #c0392b; color: white; }
   .btn-append { background: #16a085; color: white; }
   .btn-append:hover { background: #138d75; }
   .btn-toggle { background: #9b59b6; color: white; }
@@ -137,67 +209,27 @@
   .ol-form label { font-size: 14px; color: #666; font-weight: bold; }
   .ol-msg { font-size: 14px; margin-top: 8px; min-height: 20px; }
 
-  #gate { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #c0392b, #7b241c); display: flex; align-items: center; justify-content: center; padding: 20px; }
-  #gate.hidden { display: none !important; }
-  #gate .box { background: white; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 380px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
-  #gate h2 { margin: 0 0 6px 0; color: #c0392b; font-size: 22px; }
-  #gate p { margin: 0 0 16px 0; color: #666; font-size: 14px; }
-  #gate input { width: 100%; padding: 14px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; text-align: center; }
-  #gate input:focus { outline: none; border-color: #c0392b; }
-  #gate button { width: 100%; margin: 12px 0 0 0; padding: 14px; font-size: 16px; }
-  #gate .err { color: #e74c3c; font-size: 14px; min-height: 20px; margin-top: 10px; }
+
+  .course-badge { text-align: center; font-size: 13px; line-height: 1.5; color: #1f618d; background: #eaf4fb; border: 1px solid #bcd9ee; border-radius: 10px; padding: 8px 12px; margin: -8px auto 18px auto; max-width: 560px; }
 
   @media (max-width: 600px) {
     .options { grid-template-columns: 1fr; }
     .question .prompt { font-size: 32px; flex-direction: column; gap: 6px; }
     .type-box { flex-direction: column; }
   }
+  .promo-line { text-align: center; font-size: 14px; color: #555; margin: -14px 0 22px 0; }
+  .follow-btn { display: inline-block; margin-top: 8px; padding: 10px 22px; border-radius: 999px; background: #111; color: #fff !important; font-weight: bold; font-size: 15px; text-decoration: none; box-shadow: 0 3px 0 #fe2c55, 0 5px 10px rgba(0,0,0,.2); }
+  .follow-btn:hover { background: #fe2c55; box-shadow: 0 3px 0 #111, 0 5px 10px rgba(0,0,0,.2); }
 </style>
 </head>
 <body>
 
-<!-- ========== CỔNG NHẬP TÊN LỚP ========== -->
-<div id="gate">
-  <div class="box">
-    <h2>📚 Sổ tay Từ vựng HSK 2</h2>
-    <p>Vui lòng nhập <b>tên lớp</b> để vào học</p>
-    <input type="text" id="gateInput" placeholder="Nhập tên lớp..." autocomplete="off" onkeydown="if(event.key==='Enter') gateCheck()">
-    <button class="btn-primary" onclick="gateCheck()">Vào học</button>
-    <div class="err" id="gateErr"></div>
-  </div>
-</div>
-<script>
-const CLASS_NAMES = [
-  'lehoaik20'
-];
-
-function gateNorm(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]/g, '');
-}
-const GATE_OK = CLASS_NAMES.map(gateNorm);
-function gateUnlock() { document.getElementById('gate').classList.add('hidden'); }
-function gateCheck() {
-  const v = gateNorm(document.getElementById('gateInput').value);
-  if (v && GATE_OK.includes(v)) {
-    try { localStorage.setItem('zh_gate_v13_2', v); } catch (e) {}
-    gateUnlock();
-  } else {
-    document.getElementById('gateErr').textContent = '❌ Tên lớp không đúng, vui lòng thử lại.';
-    document.getElementById('gateInput').select();
-  }
-}
-(function () {
-  try {
-    const saved = localStorage.getItem('zh_gate_v13_2');
-    if (saved && GATE_OK.includes(saved)) { gateUnlock(); return; }
-  } catch (e) {}
-  setTimeout(() => { const i = document.getElementById('gateInput'); if (i) i.focus(); }, 100);
-})();
-</script>
 
 
-<h1>📚 Sổ tay Từ vựng HSK 2</h1>
-<div class="subtitle">Học mọi lúc, mọi nơi - Chia theo 15 bài</div>
+<h1>📚 Sổ tay Từ vựng HSK</h1>
+<div class="subtitle">Học mọi lúc, mọi nơi - Tự do tùy biến bộ từ của bạn</div>
+<div class="promo-line">Thấy hữu ích? Ủng hộ kênh <b>Lười học tiếng Trung</b> nhé!<br><a class="follow-btn" href="https://www.tiktok.com/@luoihoc.tiengtrung" target="_blank" rel="noopener">🎵 Follow TikTok @luoihoc.tiengtrung</a></div>
+<div class="course-badge">📘 <b>Bản V<span id="appVer"></span></b> · Đầy đủ: V3 + tính giờ, ôn từ sai, tìm từ online · Có sẵn thư viện từ vựng <b>HSK 2 (theo 15 bài)</b> (<span id="courseInfo"></span>)</div>
 
 <!-- ========== TAB NHẬP ========== -->
 <div id="tab-input">
@@ -238,7 +270,8 @@ function gateCheck() {
   </div>
   
   <div class="card">
-    <button class="btn-ghost" onclick="restoreDefaults()">↩️ Khôi phục list mặc định</button>
+    <button class="btn-ghost" onclick="restoreDefaults()">↩️ Khôi phục list mặc định (HSK 2)</button>
+    <button class="btn-danger" onclick="clearWords()">🗑 Xóa toàn bộ list hiện tại</button>
   </div>
 </div>
 
@@ -255,9 +288,9 @@ function gateCheck() {
     </div>
 
     <div class="lesson-filter">
-      <label for="lessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Bài:</label>
+      <label for="lessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Cấp Độ:</label>
       <select id="lessonSelect" onchange="changeLesson()">
-        <!-- Được sinh ra tự động bằng JS -->
+        <option value="all">Tất cả các từ</option>
       </select>
       <span id="lessonCount" style="font-size: 14px; color: #666;"></span>
     </div>
@@ -272,6 +305,7 @@ function gateCheck() {
     <div style="text-align: center; margin-bottom: 12px;">
       <button id="typeHanziBtn" class="btn-toggle" onclick="toggleType('hanzi')">⌨️ Gõ Hán tự (hiện Nghĩa)</button>
       <button id="typePinyinBtn" class="btn-toggle" onclick="toggleType('pinyin')">⌨️ Gõ Pinyin (hiện Hán tự + Nghĩa)</button>
+      <button id="hidePinyinBtn" class="btn-toggle" onclick="toggleHidePinyin()">🙈 Ẩn Pinyin</button>
     </div>
     
     <div class="stats">
@@ -311,9 +345,9 @@ function gateCheck() {
 <div id="tab-flashcard" class="hidden">
   <div class="card">
     <div class="lesson-filter">
-      <label for="fcLessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Bài:</label>
+      <label for="fcLessonSelect" style="font-weight: bold; color: #2980b9;">📖 Chọn Cấp Độ:</label>
       <select id="fcLessonSelect" onchange="changeFcLesson()">
-        <!-- Được sinh ra tự động bằng JS -->
+        <option value="all">Tất cả các từ</option>
       </select>
       <label style="margin-left: 10px; font-size: 14px;"><input type="checkbox" id="fcAutoSpeak" checked onchange="saveFcSettings()"> Tự động đọc</label>
     </div>
@@ -400,7 +434,7 @@ function gateCheck() {
     <h3>Danh sách từ (<span id="listCount">0</span> từ)</h3>
     <div style="max-height: 400px; overflow-y: auto;">
       <table>
-        <thead><tr><th>Bài</th><th>Hán tự</th><th>Pinyin</th><th>Hán Việt</th><th>Nghĩa</th><th>Nghe</th></tr></thead>
+        <thead><tr><th>Cấp độ</th><th>Hán tự</th><th>Pinyin</th><th>Hán Việt</th><th>Nghĩa</th><th>Nghe</th></tr></thead>
         <tbody id="wordTable"></tbody>
       </table>
     </div>
@@ -417,7 +451,7 @@ function gateCheck() {
 
 <script>
 // ============================================================
-// MẢNG TỪ VỰNG HSK 2 (PHÂN CHIA THEO 15 BÀI)
+// THƯ VIỆN TỪ MẶC ĐỊNH: HSK 1-3 (lấy từ v20; cấp độ = HSK 1 / HSK 2 / HSK 3)
 // ============================================================
 const defaultWords = [
   // Bài 1
@@ -733,13 +767,28 @@ const defaultWords = [
   { level: "Bài 15", hanzi: "汽车", pinyin: "qìchē", hanviet: "Khí xa", meaning: "Ô tô" },
   { level: "Bài 15", hanzi: "旅馆", pinyin: "lǚguǎn", hanviet: "Lữ quán", meaning: "Nhà trọ" }
 ];
+(function () {   // chú thích đầu trang: số cấp độ và số từ có sẵn
+  const el = document.getElementById('courseInfo');
+  if (el) el.textContent = new Set(defaultWords.map(w => w.level)).size + ' cấp độ · ' + defaultWords.length + ' từ';
+  const av = document.getElementById('appVer'); if (av && typeof APP_VERSION !== 'undefined') av.textContent = APP_VERSION;
+})();
+
+// Khóa của danh sách từ mặc định CŨ (HSK 2.0) - dùng để thay thế khi cập nhật sang chuẩn HSK 3.0
+const OLD_DEFAULT_KEYS = new Set([]);
+// Từ mặc định của bản "Luyện nói tiếng Trung cấp tốc" (nếu học sinh từng mở bản đó trên cùng địa chỉ web): coi là mặc định cũ, không giữ lại như từ tự thêm
+const OLD_DEFAULT_KEYS_COURSE = [];
+OLD_DEFAULT_KEYS_COURSE.forEach(k => OLD_DEFAULT_KEYS.add(k));
+const DATA_VERSION = 'hsk2-bai-v6';
+
 
 // ==================== BIẾN TOÀN CỤC ====================
+const FEAT = {quiz:true, adv:true, type:true, write:true};
 let words = [];
 let wrongPool = [];
 let currentWord = null;
 let currentMode = 'hanzi';
 let typeMode = null;
+let hidePinyin = false;   // true: ẩn pinyin ở Trắc nghiệm "Điền Hán tự" / "Điền Nghĩa" / "Ôn từ sai"
 let correct = 0, wrong = 0, total = 0;
 let answered = false;
 let autoNextTimer = null;
@@ -784,12 +833,12 @@ function updateSpeedLabel() {
   speechRate = parseFloat(val);
 }
 
-function saveSpeed() { localStorage.setItem('zh_speed_v13_2', speechRate); }
+function saveSpeed() { localStorage.setItem('zh_speed_hsk2', speechRate); }
 
 // ==================== LOGIC ĐẾM NGƯỢC ====================
 function toggleTimer() {
   isTimerEnabled = document.getElementById('timerToggle').checked;
-  localStorage.setItem('zh_timer_v13_2', isTimerEnabled ? '1' : '0');
+  localStorage.setItem('zh_timer_hsk2', isTimerEnabled ? '1' : '0');
   if (currentWord) nextQuestion();
 }
 
@@ -839,7 +888,7 @@ function handleTimeout() {
   else if (effectiveMode === 'pinyin') correctAns = currentWord.pinyin;
   else correctAns = currentWord.meaning;
 
-  document.getElementById('answerReveal').textContent = '⏰ Hết giờ! Đáp án: ' + correctAns;
+  document.getElementById('answerReveal').textContent = '⏰ Hết giờ! Đáp án: ' + correctAns + (pinyinHiddenNow() ? ' · Pinyin: ' + currentWord.pinyin : '');
   document.querySelectorAll('#optionsBox button').forEach(b => {
     if (b.textContent === correctAns) b.classList.add('correct');
     b.disabled = true;
@@ -851,13 +900,28 @@ function handleTimeout() {
 
 // ==================== KHỞI TẠO ====================
 function loadFromStorage() {
-  const savedSpeed = localStorage.getItem('zh_speed_v13_2');
+  const savedSpeed = localStorage.getItem('zh_speed_hsk2');
   if (savedSpeed) { speechRate = parseFloat(savedSpeed); document.getElementById('speedRange').value = speechRate; updateSpeedLabel(); }
-  const savedTimer = localStorage.getItem('zh_timer_v13_2');
-  if (savedTimer === '1') { isTimerEnabled = true; document.getElementById('timerToggle').checked = true; }
-  const saved = localStorage.getItem('zh_words_v13_2');
+  const savedTimer = localStorage.getItem('zh_timer_hsk2');
+  if (FEAT.adv && savedTimer === '1') { isTimerEnabled = true; document.getElementById('timerToggle').checked = true; }
+  const saved = localStorage.getItem('zh_words_hsk2');
   if (saved) { try { words = JSON.parse(saved); } catch(e) { words = []; } }
-  if (words.length === 0 && defaultWords.length > 0) {
+  // Cập nhật bộ từ mặc định khi DATA_VERSION đổi (giữ nguyên từ do người dùng tự thêm)
+  if (words.length > 0 && localStorage.getItem('zh_dataver_hsk2') !== DATA_VERSION) {
+    const custom = words.filter(w => w && !OLD_DEFAULT_KEYS.has(w.hanzi + '|' + w.pinyin));
+    const merged = [], seen = new Set();
+    for (const item of defaultWords.concat(custom)) {
+      const key = item.hanzi + '|' + item.pinyin;
+      if (!seen.has(key)) { seen.add(key); merged.push(item); }
+    }
+    words = merged;
+    try { wrongPool = JSON.parse(localStorage.getItem('zh_wrong_hsk2') || '[]'); } catch (e) { wrongPool = []; }
+    const byKey = new Map(words.map(w => [w.hanzi + '|' + w.pinyin, w]));
+    wrongPool = wrongPool.filter(w => w && byKey.has(w.hanzi + '|' + w.pinyin)).map(w => { const n = byKey.get(w.hanzi + '|' + w.pinyin); return { level: n.level, hanzi: n.hanzi, pinyin: n.pinyin, hanviet: n.hanviet, meaning: n.meaning }; });
+    localStorage.setItem('zh_words_hsk2', JSON.stringify(words));
+    localStorage.setItem('zh_wrong_hsk2', JSON.stringify(wrongPool));
+  }
+  if (words.length === 0 && defaultWords.length > 0 && localStorage.getItem('zh_empty_hsk2') !== '1') {
     const unique = [];
     const map = new Set();
     for (const item of defaultWords) {
@@ -865,13 +929,15 @@ function loadFromStorage() {
       if (!map.has(key)) { map.add(key); unique.push(item); }
     }
     words = unique;
-    localStorage.setItem('zh_words_v13_2', JSON.stringify(words));
+    localStorage.setItem('zh_words_hsk2', JSON.stringify(words));
   }
-  const savedWrong = localStorage.getItem('zh_wrong_v13_2');
+  try { localStorage.setItem('zh_dataver_hsk2', DATA_VERSION); } catch (e) {}
+  const savedWrong = localStorage.getItem('zh_wrong_hsk2');
   if (savedWrong) { try { wrongPool = JSON.parse(savedWrong); } catch(e) { wrongPool = []; } }
-  const savedTypeMode = localStorage.getItem('zh_typemode_v13_2');
-  if (savedTypeMode === 'hanzi' || savedTypeMode === 'pinyin') typeMode = savedTypeMode;
-  const savedLesson = localStorage.getItem('zh_lesson_v13_2');
+  hidePinyin = FEAT.type && localStorage.getItem('zh_hidepy_hsk2') === '1';
+  const savedTypeMode = localStorage.getItem('zh_typemode_hsk2');
+  if (FEAT.type && (savedTypeMode === 'hanzi' || savedTypeMode === 'pinyin')) typeMode = savedTypeMode;
+  const savedLesson = localStorage.getItem('zh_lesson_hsk2');
   if (savedLesson) {
     currentLesson = savedLesson;
     document.getElementById('lessonSelect').value = currentLesson;
@@ -882,21 +948,23 @@ function loadFromStorage() {
 }
 
 function saveAll() {
-  localStorage.setItem('zh_words_v13_2', JSON.stringify(words));
-  localStorage.setItem('zh_wrong_v13_2', JSON.stringify(wrongPool));
+  localStorage.setItem('zh_words_hsk2', JSON.stringify(words));
+  localStorage.setItem('zh_wrong_hsk2', JSON.stringify(wrongPool));
+  // list trống (do người dùng xóa) thì nhớ lại, để lần mở sau không tự nạp lại list mặc định
+  try { localStorage.setItem('zh_empty_hsk2', words.length === 0 ? '1' : '0'); } catch (e) {}
 }
 
 function changeLesson() {
   currentLesson = document.getElementById('lessonSelect').value;
   document.getElementById('fcLessonSelect').value = currentLesson;
-  localStorage.setItem('zh_lesson_v13_2', currentLesson);
+  localStorage.setItem('zh_lesson_hsk2', currentLesson);
   updateUI(); nextQuestion(); initFlashcards();
 }
 
 function changeFcLesson() {
   currentLesson = document.getElementById('fcLessonSelect').value;
   document.getElementById('lessonSelect').value = currentLesson;
-  localStorage.setItem('zh_lesson_v13_2', currentLesson);
+  localStorage.setItem('zh_lesson_hsk2', currentLesson);
   updateUI(); initFlashcards();
 }
 
@@ -914,9 +982,25 @@ function loadWords(appendMode) {
   applyNewWords(newWords, appendMode);
 }
 
+// Dòng 5 cột (level, hanzi, pinyin, hanviet, meaning): cột đầu là "HSK n"/"Bài n", hoặc cột 2 là chữ Hán còn cột 1 thì không
+function isFiveColRow(r) {
+  const c0 = String(r[0] || '').trim(), hanRe = /[\u3400-\u9fff]/;
+  return /^(hsk|bài|bai)\s*\d/i.test(c0) || (c0 !== '' && !hanRe.test(c0) && hanRe.test(String(r[1] || '')));
+}
+function normLevel(t) {
+  let m = t.match(/^(bài|bai)\s*(\d+)\s*(.*)$/i); if (m) return 'Bài ' + parseInt(m[2], 10) + (m[3] ? ' ' + m[3].trim() : '');
+  m = t.match(/^hsk\s*(\d+)\s*(.*)$/i); if (m) return 'HSK ' + parseInt(m[1], 10) + (m[2] ? ' ' + m[2].trim() : '');
+  return t;
+}
+
 function loadExcel(event, appendMode) {
   const file = event.target.files[0];
   if (!file) return;
+  if (typeof XLSX === 'undefined') {
+    alert('Chưa tải được thư viện đọc Excel (cần có mạng). Hãy kiểm tra kết nối rồi tải lại trang và thử lại.');
+    event.target.value = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
@@ -930,8 +1014,8 @@ function loadExcel(event, appendMode) {
         const r = rows[i];
         if (!r || !r[0]) continue;
         let level = 'Tự nhập', hanzi = '', pinyin = '', hanviet = '', meaning = '';
-        if (String(r[0]).startsWith('HSK') || String(r[0]).startsWith('Bài')) {
-          level = String(r[0]).trim(); hanzi = String(r[1]||'').trim(); pinyin = String(r[2]||'').trim(); hanviet = String(r[3]||'').trim(); meaning = String(r[4]||'').trim();
+        if (isFiveColRow(r)) {
+          level = normLevel(String(r[0]).trim()); hanzi = String(r[1]||'').trim(); pinyin = String(r[2]||'').trim(); hanviet = String(r[3]||'').trim(); meaning = String(r[4]||'').trim();
         } else {
           hanzi = String(r[0]).trim(); pinyin = String(r[1]||'').trim(); meaning = String(r[2]||'').trim();
         }
@@ -940,7 +1024,7 @@ function loadExcel(event, appendMode) {
       if (newWords.length === 0) { alert('Không đọc được dữ liệu.'); return; }
       applyNewWords(newWords, appendMode);
       event.target.value = '';
-    } catch (err) { alert('Lỗi đọc file: ' + err.message); }
+    } catch (err) { alert('Lỗi đọc file: ' + err.message + '\nHãy dùng file .xlsx có các cột: Cấp độ, Hán tự, Pinyin, Hán Việt, Nghĩa.'); event.target.value = ''; }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -963,21 +1047,61 @@ function applyNewWords(newWords, appendMode) {
 }
 
 function clearWords() {
-  if (confirm('Xóa hết list từ?')) { words = []; saveAll(); updateUI(); }
+  if (words.length === 0) { alert('List hiện đang trống.'); return; }
+  if (!confirm('Xóa toàn bộ ' + words.length + ' từ trong list hiện tại?\nDanh sách "Từ sai" cũng sẽ bị xóa.\n\nSau đó bạn có thể nhập file Excel hoặc bấm "Khôi phục list mặc định" để có list mới.')) return;
+  words = []; wrongPool = [];
+  currentLesson = 'all'; try { localStorage.setItem('zh_lesson_hsk2', 'all'); } catch (e) {}
+  saveAll(); updateUI();
+  const wp = document.getElementById('wrongPoolCount'); if (wp) wp.textContent = 0;
+  nextQuestion();   // xoá câu hỏi cũ đang hiện ở tab Trắc nghiệm
 }
 
 function restoreDefaults() {
-  if (!confirm('Khôi phục list mặc định?')) return;
+  if (!confirm('Khôi phục list mặc định HSK 2?')) return;
   words = defaultWords.slice(); saveAll(); updateUI();
 }
 
 // ==================== CẬP NHẬT UI ====================
+// Danh sách cấp độ/bài có trong dữ liệu, sắp theo chữ rồi số (Bài 2 trước Bài 10); "Tự nhập" luôn cuối
+function levelSortKey(l) {
+  const p = String(l).match(/^(bài|hsk)\s*(\d+)/i);
+  if (p) return [p[1].toLowerCase(), parseInt(p[2], 10)];
+  const m = String(l).match(/^(.*?)(\d+)\s*$/);
+  return m ? [m[1].trim().toLowerCase(), parseInt(m[2], 10)] : [String(l).toLowerCase(), 0];
+}
+function sortedLevels() {
+  const set = Array.from(new Set(words.map(w => w.level).filter(Boolean)));
+  const rest = set.filter(l => l !== 'Tự nhập').sort((a, b) => {
+    const ka = levelSortKey(a), kb = levelSortKey(b);
+    return ka[0] < kb[0] ? -1 : ka[0] > kb[0] ? 1 : ka[1] - kb[1];
+  });
+  return set.includes('Tự nhập') ? rest.concat('Tự nhập') : rest;
+}
+function refreshLessonOptions() {
+  const levels = sortedLevels();
+  if (currentLesson !== 'all' && !levels.includes(currentLesson)) {
+    currentLesson = 'all';
+    try { localStorage.setItem('zh_lesson_hsk2', 'all'); } catch (e) {}
+  }
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  let h = '<option value="all">Tất cả các từ (' + words.length + ')</option>';
+  levels.forEach(l => {
+    const n = words.filter(w => w.level === l).length;
+    h += '<option value="' + esc(l) + '">' + esc(l === 'Tự nhập' ? 'Từ tự nhập thêm' : l) + ' (' + n + ')</option>';
+  });
+  ['lessonSelect', 'fcLessonSelect'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) { sel.innerHTML = h; sel.value = currentLesson; }
+  });
+}
+
 function getFilteredPool() {
   if (currentLesson === 'all') return words;
   return words.filter(w => w.level === currentLesson);
 }
 
 function updateUI() {
+  refreshLessonOptions();
   const countInfoEl = document.getElementById('countInfo');
   if (countInfoEl) countInfoEl.textContent = words.length ? '(' + words.length + ' từ)' : '';
   document.getElementById('listCount').textContent = words.length;
@@ -986,7 +1110,6 @@ function updateUI() {
     '<tr><td>' + w.level + '</td><td style="font-size:22px;">' + w.hanzi + '</td><td>' + w.pinyin + '</td><td>' + (w.hanviet || '-') + '</td><td>' + w.meaning + '</td><td><button onclick="speakWordByIndex(' + index + ')" style="background:none; border:none; cursor:pointer; font-size:16px;">🔊</button></td></tr>'
   ).join('');
   
-  refreshLessonDropdowns();
   refreshWriteLevelOptions();
 
   document.getElementById('wrongPoolCount').textContent = wrongPool.length;
@@ -994,29 +1117,9 @@ function updateUI() {
   const pool = getFilteredPool();
   const lessonCountEl = document.getElementById('lessonCount');
   if (currentLesson === 'all') lessonCountEl.textContent = '(Tổng: ' + pool.length + ' từ)';
-  else lessonCountEl.textContent = '(' + pool.length + ' từ)';
+  else lessonCountEl.textContent = '(Có: ' + pool.length + ' từ)';
 
   if (words.length > 0 && !currentWord) nextQuestion();
-}
-
-function refreshLessonDropdowns() {
-  const sel1 = document.getElementById('lessonSelect');
-  const sel2 = document.getElementById('fcLessonSelect');
-  const levels = Array.from(new Set(words.map(w => w.level))).filter(l => l);
-  levels.sort((a, b) => {
-    const numA = parseInt(a.replace(/\D/g, '')) || 0;
-    const numB = parseInt(b.replace(/\D/g, '')) || 0;
-    return numA - numB;
-  });
-
-  let html = '<option value="all">Tất cả các bài (' + words.length + ')</option>';
-  levels.forEach(l => {
-    const count = words.filter(w => w.level === l).length;
-    html += '<option value="' + l + '">' + l + ' (' + count + ')</option>';
-  });
-
-  if (sel1) { sel1.innerHTML = html; sel1.value = currentLesson; if (!sel1.value) currentLesson = 'all'; sel1.value = currentLesson; }
-  if (sel2) { sel2.innerHTML = html; sel2.value = currentLesson; }
 }
 
 function speakWordByIndex(index) {
@@ -1040,15 +1143,15 @@ function showTab(name) {
 function setMode(mode) {
   currentMode = mode;
   typeMode = null;
-  localStorage.setItem('zh_typemode_v13_2', '');
+  localStorage.setItem('zh_typemode_hsk2', '');
   updateToggleButtons();
   document.querySelectorAll('.tabs button').forEach(b => { b.classList.toggle('active', b.dataset.mode === mode); });
   nextQuestion();
 }
 
 function toggleType(kind) {
-  if (typeMode === kind) { typeMode = null; localStorage.setItem('zh_typemode_v13_2', ''); }
-  else { typeMode = kind; localStorage.setItem('zh_typemode_v13_2', kind); }
+  if (typeMode === kind) { typeMode = null; localStorage.setItem('zh_typemode_hsk2', ''); }
+  else { typeMode = kind; localStorage.setItem('zh_typemode_hsk2', kind); }
   updateToggleButtons(); document.getElementById('optionsBox').innerHTML = ''; document.getElementById('answerReveal').textContent = ''; nextQuestion();
 }
 
@@ -1058,7 +1161,22 @@ function updateToggleButtons() {
   btnH.classList.toggle('on', typeMode === 'hanzi'); btnP.classList.toggle('on', typeMode === 'pinyin');
   btnH.textContent = typeMode === 'hanzi' ? '⌨️ Đang gõ Hán tự (hiện Nghĩa) — bấm để tắt' : '⌨️ Gõ Hán tự (hiện Nghĩa)';
   btnP.textContent = typeMode === 'pinyin' ? '⌨️ Đang gõ Pinyin (hiện Hán tự + Nghĩa) — bấm để tắt' : '⌨️ Gõ Pinyin (hiện Hán tự + Nghĩa)';
+  // Nút Ẩn Pinyin chỉ có ý nghĩa ở Trắc nghiệm Điền Hán tự / Điền Nghĩa / Ôn từ sai
+  const btnHide = document.getElementById('hidePinyinBtn');
+  if (btnHide) {
+    btnHide.classList.toggle('hidden', !!typeMode || currentMode === 'pinyin');
+    btnHide.classList.toggle('on', hidePinyin);
+    btnHide.textContent = hidePinyin ? '👁 Đang ẩn Pinyin — bấm để hiện' : '🙈 Ẩn Pinyin';
+  }
 }
+
+function toggleHidePinyin() {
+  hidePinyin = !hidePinyin;
+  try { localStorage.setItem('zh_hidepy_hsk2', hidePinyin ? '1' : '0'); } catch (e) {}
+  updateToggleButtons(); nextQuestion();
+}
+// Pinyin đang bị ẩn ở câu hỏi trắc nghiệm hiện tại?
+function pinyinHiddenNow() { return hidePinyin && !typeMode && currentMode !== 'pinyin'; }
 
 function normalize(str, mode) {
   let s = String(str).trim();
@@ -1123,9 +1241,13 @@ function nextQuestion() {
   typeBox.classList.add('hidden'); input.value = ''; input.classList.remove('correct', 'wrong');
   const effectiveMode = currentMode === 'wrong' ? 'hanzi' : currentMode;
 
-  if (effectiveMode === 'hanzi') { promptEl.textContent = currentWord.pinyin; subEl.textContent = currentWord.meaning; }
+  const hidePy = hidePinyin;   // chỉ ảnh hưởng chế độ hỏi bằng pinyin (Điền Hán tự) và hiện pinyin phụ (Điền Nghĩa)
+  if (effectiveMode === 'hanzi') {
+    if (hidePy) { promptEl.textContent = currentWord.meaning; subEl.textContent = ''; }
+    else { promptEl.textContent = currentWord.pinyin; subEl.textContent = currentWord.meaning; }
+  }
   else if (effectiveMode === 'pinyin') { promptEl.textContent = currentWord.hanzi; subEl.textContent = currentWord.meaning; }
-  else { promptEl.textContent = currentWord.hanzi; subEl.textContent = currentWord.pinyin; }
+  else { promptEl.textContent = currentWord.hanzi; subEl.textContent = hidePy ? '' : currentWord.pinyin; }
 
   const key = effectiveMode === 'hanzi' ? 'hanzi' : effectiveMode === 'pinyin' ? 'pinyin' : 'meaning';
   const correctAns = currentWord[key];
@@ -1149,8 +1271,10 @@ function checkAnswer(btn, chosen, correctAns) {
   answered = true; total++; stopTimer();
   const allBtns = document.querySelectorAll('#optionsBox button');
   allBtns.forEach(b => { b.disabled = true; if (b.textContent === correctAns) b.classList.add('correct'); });
+  const showPy = pinyinHiddenNow();
+  if (showPy) document.getElementById('answerReveal').textContent = '🔤 Pinyin: ' + currentWord.pinyin;
   if (chosen === correctAns) {
-    correct++; updateStats(); autoNextTimer = setTimeout(() => nextQuestion(), 800);
+    correct++; updateStats(); autoNextTimer = setTimeout(() => nextQuestion(), showPy ? 1500 : 800);
   } else {
     wrong++; btn.classList.add('wrong'); addToWrongPool(); updateStats(); setNextButtonEnabled(true);
   }
@@ -1233,16 +1357,16 @@ function ensureWriteSettings() {
   if (writeSettingsLoaded) return;
   writeSettingsLoaded = true;
   try {
-    const m = localStorage.getItem('zh_wmode_v13_2'); if (m === 'trace' || m === 'memory') writeMode = m;
-    const l = localStorage.getItem('zh_wlevel_v13_2'); if (l) writeLevel = l;
-    writeRandom = localStorage.getItem('zh_wrandom_v13_2') === '1';
+    const m = localStorage.getItem('zh_wmode_hsk2'); if (m === 'trace' || m === 'memory') writeMode = m;
+    const l = localStorage.getItem('zh_wlevel_hsk2'); if (l) writeLevel = l;
+    writeRandom = localStorage.getItem('zh_wrandom_hsk2') === '1';
   } catch (e) {}
 }
 function saveWriteSettings() {
   try {
-    localStorage.setItem('zh_wmode_v13_2', writeMode);
-    localStorage.setItem('zh_wlevel_v13_2', writeLevel);
-    localStorage.setItem('zh_wrandom_v13_2', writeRandom ? '1' : '0');
+    localStorage.setItem('zh_wmode_hsk2', writeMode);
+    localStorage.setItem('zh_wlevel_hsk2', writeLevel);
+    localStorage.setItem('zh_wrandom_hsk2', writeRandom ? '1' : '0');
   } catch (e) {}
 }
 
@@ -1255,20 +1379,12 @@ function getWritePool() {
 function refreshWriteLevelOptions() {
   const sel = wEl('writeLevel'); if (!sel) return;
   ensureWriteSettings();
-  const levels = Array.from(new Set(words.map(w => w.level))).filter(l => l);
-  levels.sort((a, b) => {
-    const numA = parseInt(a.replace(/\D/g, '')) || 0;
-    const numB = parseInt(b.replace(/\D/g, '')) || 0;
-    return numA - numB;
-  });
-
   let h = '<option value="all">Tất cả (' + words.length + ')</option>';
-  levels.forEach(l => {
+  sortedLevels().forEach(l => {
     const n = words.filter(w => w.level === l).length;
     if (n) h += '<option value="' + l + '">' + l + ' (' + n + ')</option>';
   });
   h += '<option value="wrong">🔥 Từ sai (' + wrongPool.length + ')</option>';
-  
   sel.innerHTML = h;
   if (!Array.from(sel.options).some(o => o.value === writeLevel)) writeLevel = 'all';
   sel.value = writeLevel;
@@ -1559,6 +1675,7 @@ function searchOnlineFromWrite() {
 }
 
 // ==================== TÌM TỪ ONLINE ====================
+// Dùng dịch vụ dịch miễn phí của Google (không cần khóa API). Cần có kết nối mạng.
 async function gtx(q, sl, tl) {
   const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + sl + '&tl=' + tl +
     '&dt=t&dt=rm&dt=bd&q=' + encodeURIComponent(q);
@@ -1572,6 +1689,7 @@ function olMsg(text, color) {
 }
 function capFirst(s) { s = String(s || '').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
+// Gợi ý Hán Việt: ghép từ các chữ đơn đã có trong thư viện (chỉ khi đủ tất cả các chữ)
 function guessHanViet(hanzi) {
   const chars = Array.from(hanzi);
   const out = [];
